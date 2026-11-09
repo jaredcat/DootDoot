@@ -1,6 +1,12 @@
+---
+layout: default
+title: Privacy Policy
+permalink: /privacy-policy/
+---
+
 # DootDoot Privacy Policy
 
-**Last updated:** 2026-11-08
+**Last updated:** 2026-11-09
 
 DootDoot is an unofficial companion app for tududi. It is not affiliated with tududi or Chris Veleris.
 
@@ -22,4 +28,4 @@ DootDoot does **not** operate a backend that stores your tasks, notes, or projec
 
 ## Contact
 
-For privacy questions about DootDoot, open an issue in the DootDoot repository.
+For privacy questions about DootDoot, [open an issue](https://github.com/jaredcat/dootdoot/issues).

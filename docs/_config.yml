@@ -1,0 +1,8 @@
+title: DootDoot
+description: Unofficial tududi companion
+theme: jekyll-theme-primer
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: true

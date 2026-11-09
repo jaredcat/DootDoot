@@ -22,8 +22,10 @@ packages/dootdoot_app/    Shared UI shell
 packages/pro_api/         Pro interfaces + free host (1-account cap)
 packages/tududi_api/      Typed tududi REST client
 packages/design/          Theme and shared UI tokens
-docs/                     Privacy, store checklist
+docs/                     Privacy policy (GitHub Pages)
 ```
+
+**Privacy policy:** https://jaredcat.github.io/dootdoot/privacy-policy/
 
 Local layout (both checkouts side by side):
 
