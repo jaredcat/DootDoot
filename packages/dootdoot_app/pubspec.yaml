@@ -1,0 +1,46 @@
+name: dootdoot_app
+description: Shared DootDoot UI shell used by free and Pro entrypoints.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+  flutter: '>=3.47.0'
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dootdoot_design:
+    path: ../design
+  tududi_api:
+    path: ../tududi_api
+  pro_api:
+    path: ../pro_api
+  flutter_riverpod: ^3.5.0
+  go_router: ^18.1.3
+  flutter_secure_storage: ^11.2.0
+  shared_preferences: ^2.5.6
+  uuid: ^4.6.0
+  intl: ^0.20.3
+  url_launcher: ^6.3.3
+  collection: ^1.19.1
+  path_provider: ^2.1.6
+  cookie_jar: ^4.0.9
+  dio: ^5.11.1
+  equatable: ^3.0.0
+  flutter_local_notifications: ^23.0.0
+  timezone: ^0.11.2
+  flutter_timezone: ^5.1.1
+  workmanager: ^0.10.10
+  permission_handler: ^13.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

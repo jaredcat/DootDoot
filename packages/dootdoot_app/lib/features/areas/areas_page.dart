@@ -1,0 +1,44 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../tasks/task_providers.dart';
+
+class AreasPage extends ConsumerWidget {
+  const AreasPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(areasProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Areas')),
+      body: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text(e.toString())),
+        data: (areas) {
+          if (areas.isEmpty) {
+            return const Center(child: Text('No areas yet'));
+          }
+          return RefreshIndicator(
+            onRefresh: () async => ref.invalidate(areasProvider),
+            child: ListView.separated(
+              itemCount: areas.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final area = areas[index];
+                return ListTile(
+                  leading: const Icon(Icons.layers_outlined),
+                  title: Text(area.name),
+                  subtitle:
+                      area.description != null && area.description!.isNotEmpty
+                      ? Text(area.description!)
+                      : null,
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

@@ -1,0 +1,12 @@
+name: dootdoot_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/mobile
+  - packages/tududi_api
+  - packages/design
+  - packages/pro_api
+  - packages/dootdoot_app
