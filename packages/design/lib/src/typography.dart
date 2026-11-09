@@ -10,7 +10,6 @@ abstract final class DootTypography {
         ? DootColors.darkInk.withValues(alpha: 0.7)
         : DootColors.inkMuted;
 
-    // Single sans family for all roles — no serif/display mix.
     final sans = GoogleFonts.sora(
       color: base,
       height: 1.4,
@@ -21,21 +20,21 @@ abstract final class DootTypography {
     );
 
     return TextTheme(
-      displayLarge: display.copyWith(fontSize: 40),
-      displayMedium: display.copyWith(fontSize: 32),
-      displaySmall: display.copyWith(fontSize: 28),
-      headlineLarge: display.copyWith(fontSize: 26),
-      headlineMedium: display.copyWith(fontSize: 22),
-      headlineSmall: display.copyWith(fontSize: 20),
-      titleLarge: sans.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
-      titleMedium: sans.copyWith(fontSize: 17, fontWeight: FontWeight.w600),
-      titleSmall: sans.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
-      bodyLarge: sans.copyWith(fontSize: 17),
-      bodyMedium: sans.copyWith(fontSize: 15),
-      bodySmall: sans.copyWith(fontSize: 13, color: muted),
-      labelLarge: sans.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
-      labelMedium: sans.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
-      labelSmall: sans.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+      displayLarge: display.copyWith(fontSize: 33),
+      displayMedium: display.copyWith(fontSize: 26),
+      displaySmall: display.copyWith(fontSize: 23),
+      headlineLarge: display.copyWith(fontSize: 21),
+      headlineMedium: display.copyWith(fontSize: 18),
+      headlineSmall: display.copyWith(fontSize: 16),
+      titleLarge: sans.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+      titleMedium: sans.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
+      titleSmall: sans.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+      bodyLarge: sans.copyWith(fontSize: 14),
+      bodyMedium: sans.copyWith(fontSize: 12),
+      bodySmall: sans.copyWith(fontSize: 11, color: muted),
+      labelLarge: sans.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+      labelMedium: sans.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+      labelSmall: sans.copyWith(fontSize: 9, fontWeight: FontWeight.w600),
     );
   }
 }

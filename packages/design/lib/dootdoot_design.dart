@@ -1,5 +1,6 @@
 library;
 
+export 'src/brand_assets.dart';
 export 'src/colors.dart';
 export 'src/theme.dart';
 export 'src/spacing.dart';

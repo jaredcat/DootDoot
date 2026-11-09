@@ -68,7 +68,7 @@ class ShellAppBarActions extends ConsumerWidget {
                 account.label.isNotEmpty
                     ? account.label.substring(0, 1).toUpperCase()
                     : '?',
-                style: const TextStyle(fontSize: 12),
+                style: const TextStyle(fontSize: 10),
               ),
             ),
           ),
