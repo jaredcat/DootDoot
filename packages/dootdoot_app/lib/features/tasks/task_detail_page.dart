@@ -27,6 +27,24 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     super.dispose();
   }
 
+  static const _statusChoices = [
+    TaskStatus.notStarted,
+    TaskStatus.inProgress,
+    TaskStatus.waiting,
+    TaskStatus.planned,
+    TaskStatus.done,
+    TaskStatus.archived,
+    TaskStatus.cancelled,
+  ];
+
+  void _invalidateTaskLists() {
+    ref.invalidate(taskDetailProvider(widget.uid));
+    ref.invalidate(tasksProvider(TaskListFilter.today));
+    ref.invalidate(tasksProvider(TaskListFilter.upcoming));
+    ref.invalidate(tasksProvider(TaskListFilter.inbox));
+    ref.invalidate(tasksProvider(TaskListFilter.all));
+  }
+
   Future<void> _save(TududiTask task) async {
     setState(() => _saving = true);
     try {
@@ -42,10 +60,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         },
         current: task,
       );
-      ref.invalidate(taskDetailProvider(widget.uid));
-      ref.invalidate(tasksProvider(TaskListFilter.today));
-      ref.invalidate(tasksProvider(TaskListFilter.upcoming));
-      ref.invalidate(tasksProvider(TaskListFilter.inbox));
+      _invalidateTaskLists();
       if (mounted) {
         final offlineMsg = offlineQueuedMessage(result);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -68,11 +83,79 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           done: !task.isDone,
           current: task,
         );
-    ref.invalidate(taskDetailProvider(widget.uid));
-    ref.invalidate(tasksProvider(TaskListFilter.today));
+    _invalidateTaskLists();
     final msg = offlineQueuedMessage(result);
     if (msg != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
+  Future<void> _setStatus(TududiTask task, int status) async {
+    if (status == task.status) return;
+    setState(() => _saving = true);
+    try {
+      final result =
+          await ref.read(offlineWriteCoordinatorProvider).updateTask(
+        widget.uid,
+        {
+          'name': _nameController.text.trim(),
+          'note': _noteController.text.trim(),
+          'status': status,
+          'priority': task.priority,
+          'due_date': task.dueDate,
+        },
+        current: task,
+      );
+      _invalidateTaskLists();
+      if (mounted) {
+        final offlineMsg = offlineQueuedMessage(result);
+        if (offlineMsg != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(offlineMsg)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickStatus(TududiTask task) async {
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Status',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              for (final status in _statusChoices)
+                ListTile(
+                  title: Text(TaskStatus.label(status)),
+                  trailing: status == task.status
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(status),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected != null && mounted) {
+      await _setStatus(task, selected);
     }
   }
 
@@ -129,6 +212,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Status'),
                 subtitle: Text(TaskStatus.label(task.status)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _saving ? null : () => _pickStatus(task),
               ),
               if (task.dueDate != null)
                 ListTile(
