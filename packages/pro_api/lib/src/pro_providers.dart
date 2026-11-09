@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'free_pro_controller.dart';
 import 'pro_controller.dart';
+import 'pro_unlock_sheet.dart';
 
 final proControllerProvider =
     NotifierProvider<ProController, bool>(FreeProController.new);
@@ -16,6 +17,35 @@ bool canAddAccount({
   final max = controller.maxAccounts;
   if (max == null) return true;
   return accountCount < max;
+}
+
+/// Shows the Pro unlock / status sheet. Returns `true` if unlock was started.
+Future<bool> showProUnlockSheet(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final controller = ref.read(proControllerProvider.notifier);
+  final isPro = ref.read(proControllerProvider);
+  final result = await showModalBottomSheet<bool>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => ProUnlockSheet(
+      isPro: isPro,
+      canPurchase: controller.canPurchase,
+      onUnlock: () => Navigator.pop(sheetContext, true),
+      onRestore: () async {
+        await controller.restore();
+        if (sheetContext.mounted) Navigator.pop(sheetContext, false);
+      },
+      onDismiss: () => Navigator.pop(sheetContext, false),
+    ),
+  );
+  if (result == true) {
+    await controller.purchase();
+    return true;
+  }
+  return false;
 }
 
 /// Gates adding an account: upsell when the store build can purchase, otherwise
@@ -31,16 +61,8 @@ Future<bool> ensureCanAddAccount(
   }
 
   if (controller.canPurchase) {
-    final unlock = await showModalBottomSheet<bool>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) => const _AccountLimitUpsellSheet(),
-    );
-    if (unlock == true) {
-      await controller.purchase();
-      if (ref.read(proControllerProvider)) return true;
-    }
-    return false;
+    await showProUnlockSheet(context, ref);
+    return ref.read(proControllerProvider);
   }
 
   if (context.mounted) {
@@ -80,91 +102,8 @@ Future<void> openProFeature(
     }
     return;
   }
-  final unlock = await showModalBottomSheet<bool>(
-    context: context,
-    showDragHandle: true,
-    builder: (context) => const _ProUpsellSheet(),
-  );
-  if (unlock == true && context.mounted) {
-    await controller.purchase();
-    if (ref.read(proControllerProvider) && context.mounted) {
-      context.push(route);
-    }
-  }
-}
-
-class _ProUpsellSheet extends ConsumerWidget {
-  const _ProUpsellSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Unlock DootDoot Pro',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'One-time purchase for calendar, goals, habits, boards, offline '
-            'cache, widgets, and unlimited accounts. Core tasks stay free '
-            'forever.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Unlock Pro'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await ref.read(proControllerProvider.notifier).restore();
-              if (context.mounted) Navigator.pop(context, false);
-            },
-            child: const Text('Restore purchase'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AccountLimitUpsellSheet extends ConsumerWidget {
-  const _AccountLimitUpsellSheet();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Unlimited accounts with Pro',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'The free tier includes one account. Unlock Pro for unlimited '
-            'accounts plus calendar, goals, habits, boards, and offline sync.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Unlock Pro'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Not now'),
-          ),
-        ],
-      ),
-    );
+  await showProUnlockSheet(context, ref);
+  if (ref.read(proControllerProvider) && context.mounted) {
+    context.push(route);
   }
 }

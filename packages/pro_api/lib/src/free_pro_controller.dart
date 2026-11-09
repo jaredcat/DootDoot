@@ -7,6 +7,7 @@ import 'nav_pin.dart';
 import 'offline_cache_port.dart';
 import 'pro_controller.dart';
 import 'pro_nav.dart';
+import 'pro_providers.dart';
 import 'pro_widgets.dart';
 
 /// Community / public build: fully usable free app, no IAP, no Pro screens.
@@ -44,19 +45,20 @@ class FreeProController extends ProController {
 
   @override
   List<Widget> buildSettingsTiles(BuildContext context, WidgetRef ref) {
-    return const [
+    return [
       ListTile(
-        leading: Icon(Symbols.workspace_premium),
-        title: Text('DootDoot Pro'),
-        subtitle: Text(
+        leading: const Icon(Symbols.workspace_premium),
+        title: const Text('DootDoot Pro'),
+        subtitle: const Text(
           'Calendar, goals, habits, boards, offline sync, widgets, '
           'custom bottom navigation, and unlimited accounts are available '
           'with DootDoot Pro on the App Store and Google Play.',
         ),
-        trailing: ProBadge(),
+        trailing: const ProBadge(),
         isThreeLine: true,
+        onTap: () => showProUnlockSheet(context, ref),
       ),
-      ListTile(
+      const ListTile(
         leading: Icon(Symbols.space_dashboard),
         title: Text('Navigation'),
         subtitle: Text('Pro enhancement'),

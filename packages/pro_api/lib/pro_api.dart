@@ -6,4 +6,5 @@ export 'src/offline_cache_port.dart';
 export 'src/pro_controller.dart';
 export 'src/pro_nav.dart';
 export 'src/pro_providers.dart';
+export 'src/pro_unlock_sheet.dart';
 export 'src/pro_widgets.dart';
