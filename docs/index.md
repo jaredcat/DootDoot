@@ -10,3 +10,4 @@ Unofficial Flutter companion for [tududi](https://tududi.com). Connect to tududi
 ## Legal
 
 - [Privacy Policy](privacy-policy/)
+- [Request data deletion](data-deletion/)
