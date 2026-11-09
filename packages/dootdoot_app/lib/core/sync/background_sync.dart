@@ -10,6 +10,8 @@ import '../accounts/account_secrets.dart';
 import '../accounts/account_store.dart';
 import '../notifications/notification_preferences.dart';
 import '../notifications/notification_service.dart';
+import '../offline/drift/drift_offline_cache.dart';
+import '../offline/offline_write_coordinator.dart';
 
 /// Periodic on-device Tududi refresh + local notification reschedule.
 ///
@@ -94,6 +96,12 @@ abstract final class BackgroundSync {
           allTasks.addAll([...today, ...upcoming]);
 
           if (proUnlocked) {
+            final cache = DriftOfflineCache.open(prefs: prefs);
+            await OfflineWriteCoordinator.drainWith(
+              cache: cache,
+              client: client,
+              accountId: account.id,
+            );
             try {
               allHabits.addAll(await client.listHabits());
             } catch (_) {}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/offline/sync_status_button.dart';
 import '../tasks/task_providers.dart';
 
 class NotesPage extends ConsumerWidget {
@@ -12,7 +13,10 @@ class NotesPage extends ConsumerWidget {
     final async = ref.watch(notesProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notes')),
+      appBar: AppBar(
+        title: const Text('Notes'),
+        actions: const [SyncStatusButton()],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/notes/new'),
         child: const Icon(Icons.add),

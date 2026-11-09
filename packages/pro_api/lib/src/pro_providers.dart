@@ -151,7 +151,7 @@ class _AccountLimitUpsellSheet extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             'The free tier includes one account. Unlock Pro for unlimited '
-            'accounts plus calendar, goals, habits, boards, and offline cache.',
+            'accounts plus calendar, goals, habits, boards, and offline sync.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 20),

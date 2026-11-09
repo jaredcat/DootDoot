@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/offline/sync_status_button.dart';
 import '../tasks/task_providers.dart';
 
 class AreasPage extends ConsumerWidget {
@@ -12,7 +13,10 @@ class AreasPage extends ConsumerWidget {
     final async = ref.watch(areasProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Areas')),
+      appBar: AppBar(
+        title: const Text('Areas'),
+        actions: const [SyncStatusButton()],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),

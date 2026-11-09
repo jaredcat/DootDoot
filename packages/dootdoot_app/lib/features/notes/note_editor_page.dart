@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pro_api/pro_api.dart';
+import 'package:tududi_api/tududi_api.dart';
 
+import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_providers.dart';
 
@@ -18,6 +21,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   final _contentController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
+  TududiNote? _current;
 
   @override
   void initState() {
@@ -32,10 +36,35 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     }
     try {
       final client = await ref.read(tududiClientProvider.future);
-      if (client == null) return;
-      final note = await client.getNote(widget.uid!);
-      _titleController.text = note.title;
-      _contentController.text = note.content ?? '';
+      if (client != null) {
+        try {
+          final note = await client.getNote(widget.uid!);
+          _current = note;
+          _titleController.text = note.title;
+          _contentController.text = note.content ?? '';
+          return;
+        } catch (_) {
+          // Fall through to cache when offline.
+        }
+      }
+      final account = ref.read(activeAccountProvider);
+      final isPro = ref.read(proControllerProvider);
+      if (account != null && isPro) {
+        final cache = ref.read(offlineCacheProvider);
+        final raw = await cache.getJson(account.id, 'notes');
+        if (raw is List) {
+          for (final item in raw.whereType<Map>()) {
+            final note =
+                TududiNote.fromJson(Map<String, dynamic>.from(item));
+            if (note.uid == widget.uid) {
+              _current = note;
+              _titleController.text = note.title;
+              _contentController.text = note.content ?? '';
+              break;
+            }
+          }
+        }
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -44,21 +73,31 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      final client = await ref.read(tududiClientProvider.future);
-      if (client == null) return;
       final body = {
         'title': _titleController.text.trim().isEmpty
             ? 'Untitled'
             : _titleController.text.trim(),
         'content': _contentController.text,
       };
+      final coordinator = ref.read(offlineWriteCoordinatorProvider);
+      final OfflineMutationResult<TududiNote> result;
       if (widget.uid == null) {
-        await client.createNote(body);
+        result = await coordinator.createNote(body);
       } else {
-        await client.updateNote(widget.uid!, body);
+        result = await coordinator.updateNote(
+          widget.uid!,
+          body,
+          current: _current,
+        );
       }
       ref.invalidate(notesProvider);
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      final msg = offlineQueuedMessage(result);
+      if (msg != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
+      }
+      Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

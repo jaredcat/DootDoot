@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 
+import '../../core/offline/sync_status_button.dart';
 import '../tasks/task_providers.dart';
 
 class ProjectsPage extends ConsumerWidget {
@@ -13,7 +14,10 @@ class ProjectsPage extends ConsumerWidget {
     final async = ref.watch(projectsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Projects')),
+      appBar: AppBar(
+        title: const Text('Projects'),
+        actions: const [SyncStatusButton()],
+      ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),

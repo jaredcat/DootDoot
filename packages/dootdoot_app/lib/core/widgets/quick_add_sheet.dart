@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers.dart';
+import '../offline/offline_write_coordinator.dart';
 import '../../features/tasks/task_providers.dart';
 
 Future<void> showQuickAddSheet(BuildContext context) {
@@ -35,12 +35,18 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     if (name.isEmpty) return;
     setState(() => _busy = true);
     try {
-      final client = await ref.read(tududiClientProvider.future);
-      if (client == null) return;
-      await client.createTask({'name': name});
+      final result = await ref
+          .read(offlineWriteCoordinatorProvider)
+          .createTask({'name': name});
       ref.invalidate(tasksProvider(TaskListFilter.today));
       ref.invalidate(tasksProvider(TaskListFilter.inbox));
-      if (mounted) Navigator.pop(context);
+      if (!mounted) return;
+      final offlineMsg = offlineQueuedMessage(result);
+      if (offlineMsg != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(offlineMsg)));
+      }
+      Navigator.pop(context);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)

@@ -48,7 +48,7 @@ class FreeProController extends ProController {
         leading: Icon(Icons.workspace_premium_outlined),
         title: Text('DootDoot Pro'),
         subtitle: Text(
-          'Calendar, goals, habits, boards, offline cache, widgets, '
+          'Calendar, goals, habits, boards, offline sync, widgets, '
           'custom bottom navigation, and unlimited accounts are available '
           'with DootDoot Pro on the App Store and Google Play.',
         ),
@@ -61,13 +61,6 @@ class FreeProController extends ProController {
         subtitle: Text('Pro enhancement'),
         trailing: ProBadge(),
         enabled: false,
-      ),
-      SwitchListTile(
-        secondary: Icon(Icons.cloud_off_outlined),
-        title: Text('Offline cache'),
-        subtitle: Text('Pro enhancement'),
-        value: false,
-        onChanged: null,
       ),
     ];
   }

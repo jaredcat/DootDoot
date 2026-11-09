@@ -190,7 +190,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             Text(
               'Free includes one tududi account. DootDoot Pro unlocks unlimited '
               'accounts so you can switch between Cloud and self-hosted '
-              'servers — plus calendar, goals, habits, boards, and offline cache.',
+              'servers — plus calendar, goals, habits, boards, and offline sync.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),

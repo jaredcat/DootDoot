@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
 
+import '../../core/offline/sync_status_button.dart';
 import '../../core/providers.dart';
 import '../../core/widgets/account_switcher_sheet.dart';
 import '../../core/widgets/quick_add_sheet.dart';
@@ -85,6 +86,7 @@ class HomeShell extends ConsumerWidget {
                     : (currentPin?.label ?? _legacyTitleFor(shellIndex)),
               ),
               actions: [
+                const SyncStatusButton(),
                 if (account != null)
                   IconButton(
                     tooltip: account.label,

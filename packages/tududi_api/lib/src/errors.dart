@@ -11,6 +11,11 @@ class TududiApiException implements Exception {
 
   bool get isUnauthorized => statusCode == 401 || statusCode == 403;
 
+  /// No HTTP response — typically offline or DNS/TLS failure.
+  bool get isTransportFailure => statusCode == null;
+
+  bool get isGone => statusCode == 404 || statusCode == 410;
+
   @override
   String toString() => 'TududiApiException($statusCode): $message';
 }

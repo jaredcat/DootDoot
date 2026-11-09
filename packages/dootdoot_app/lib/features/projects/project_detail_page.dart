@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 
+import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_tile.dart';
 
@@ -61,13 +62,22 @@ class ProjectDetailPage extends ConsumerWidget {
                   (task) => TaskTile(
                     task: task,
                     onToggle: () async {
-                      final client = await ref.read(
-                        tududiClientProvider.future,
-                      );
                       final taskUid = task.uid;
-                      if (client == null || taskUid == null) return;
-                      await client.completeTask(taskUid, done: !task.isDone);
+                      if (taskUid == null) return;
+                      final result = await ref
+                          .read(offlineWriteCoordinatorProvider)
+                          .completeTask(
+                            taskUid,
+                            done: !task.isDone,
+                            current: task,
+                          );
                       ref.invalidate(projectDetailProvider(uid));
+                      final msg = offlineQueuedMessage(result);
+                      if (msg != null && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
+                      }
                     },
                     onOpen: () {
                       final taskUid = task.uid;

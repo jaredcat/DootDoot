@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tududi_api/tududi_api.dart';
 
-import '../../core/providers.dart';
+import '../../core/offline/offline_write_coordinator.dart';
 import 'task_providers.dart';
 
 class TaskDetailPage extends ConsumerStatefulWidget {
@@ -28,24 +28,29 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   Future<void> _save(TududiTask task) async {
-    final client = await ref.read(tududiClientProvider.future);
-    if (client == null) return;
     setState(() => _saving = true);
     try {
-      await client.updateTask(widget.uid, {
-        'name': _nameController.text.trim(),
-        'note': _noteController.text.trim(),
-        'status': task.status,
-        'priority': task.priority,
-        'due_date': task.dueDate,
-      });
+      final result =
+          await ref.read(offlineWriteCoordinatorProvider).updateTask(
+        widget.uid,
+        {
+          'name': _nameController.text.trim(),
+          'note': _noteController.text.trim(),
+          'status': task.status,
+          'priority': task.priority,
+          'due_date': task.dueDate,
+        },
+        current: task,
+      );
       ref.invalidate(taskDetailProvider(widget.uid));
       ref.invalidate(tasksProvider(TaskListFilter.today));
       ref.invalidate(tasksProvider(TaskListFilter.upcoming));
       ref.invalidate(tasksProvider(TaskListFilter.inbox));
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Saved')));
+        final offlineMsg = offlineQueuedMessage(result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(offlineMsg ?? 'Saved')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -58,11 +63,17 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   Future<void> _toggleDone(TududiTask task) async {
-    final client = await ref.read(tududiClientProvider.future);
-    if (client == null) return;
-    await client.completeTask(widget.uid, done: !task.isDone);
+    final result = await ref.read(offlineWriteCoordinatorProvider).completeTask(
+          widget.uid,
+          done: !task.isDone,
+          current: task,
+        );
     ref.invalidate(taskDetailProvider(widget.uid));
     ref.invalidate(tasksProvider(TaskListFilter.today));
+    final msg = offlineQueuedMessage(result);
+    if (msg != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   @override

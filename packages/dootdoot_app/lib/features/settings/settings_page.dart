@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/offline/sync_status_button.dart';
 import '../../core/providers.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -15,7 +16,10 @@ class SettingsPage extends ConsumerWidget {
     final controller = ref.watch(proControllerProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        actions: const [SyncStatusButton()],
+      ),
       body: ListView(
         children: [
           if (account != null) ...[
