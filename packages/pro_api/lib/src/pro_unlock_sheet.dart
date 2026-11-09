@@ -11,6 +11,7 @@ class ProUnlockSheet extends StatelessWidget {
     required this.canPurchase,
     required this.onUnlock,
     required this.onRestore,
+    required this.onRedeem,
     required this.onDismiss,
   });
 
@@ -18,6 +19,7 @@ class ProUnlockSheet extends StatelessWidget {
   final bool canPurchase;
   final VoidCallback onUnlock;
   final VoidCallback onRestore;
+  final VoidCallback onRedeem;
   final VoidCallback onDismiss;
 
   static const features = <(IconData, String)>[
@@ -96,6 +98,10 @@ class ProUnlockSheet extends StatelessWidget {
               TextButton(
                 onPressed: onRestore,
                 child: const Text('Restore purchase'),
+              ),
+              TextButton(
+                onPressed: onRedeem,
+                child: const Text('Redeem code'),
               ),
             ] else if (isPro && canPurchase) ...[
               FilledButton(

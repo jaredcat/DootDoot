@@ -38,6 +38,10 @@ Future<bool> showProUnlockSheet(
         await controller.restore();
         if (sheetContext.mounted) Navigator.pop(sheetContext, false);
       },
+      onRedeem: () async {
+        await controller.redeemPromoCode();
+        if (sheetContext.mounted) Navigator.pop(sheetContext, false);
+      },
       onDismiss: () => Navigator.pop(sheetContext, false),
     ),
   );

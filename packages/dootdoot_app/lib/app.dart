@@ -2,6 +2,8 @@ import 'package:dootdoot_design/dootdoot_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:pro_api/pro_api.dart';
+
 import 'core/edit_history/edit_history.dart';
 import 'core/notifications/notification_bootstrap.dart';
 import 'core/notifications/notification_providers.dart';
@@ -56,6 +58,8 @@ class _DootdootAppState extends ConsumerState<DootdootApp>
         ref.read(offlineWriteCoordinatorProvider).drain();
       case AppLifecycleState.resumed:
         ref.read(offlineWriteCoordinatorProvider).drain();
+        // Pick up Play / App Store promo redemptions that happened outside the app.
+        ref.read(proControllerProvider.notifier).syncPurchases();
       case AppLifecycleState.inactive:
         break;
     }
