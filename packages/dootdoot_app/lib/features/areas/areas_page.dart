@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../tasks/task_providers.dart';
 
@@ -33,6 +34,13 @@ class AreasPage extends ConsumerWidget {
                       area.description != null && area.description!.isNotEmpty
                       ? Text(area.description!)
                       : null,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    final uid = area.uid;
+                    if (uid != null) {
+                      context.push('/more/areas/$uid');
+                    }
+                  },
                 );
               },
             ),

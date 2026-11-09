@@ -1,11 +1,11 @@
 name: dootdoot
-description: Unofficial Flutter companion for Tududi (free / community build).
+description: Unofficial Flutter companion for tududi (free / community build).
 publish_to: none
 version: 0.1.0+1
 
 environment:
   sdk: ^3.13.0
-  flutter: ">=3.47.0"
+  flutter: '>=3.47.0'
 
 resolution: workspace
 

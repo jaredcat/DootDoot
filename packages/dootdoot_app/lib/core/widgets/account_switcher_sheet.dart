@@ -21,6 +21,7 @@ class AccountSwitcherSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accounts = ref.watch(accountsProvider);
     final activeId = ref.watch(activeAccountIdProvider);
+    ref.watch(proControllerProvider);
 
     return SafeArea(
       child: Column(
@@ -59,13 +60,13 @@ class AccountSwitcherSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.add),
             title: const Text('Add account'),
+            trailing: canAddAccount(
+                  accountCount: accounts.length,
+                  controller: ref.read(proControllerProvider.notifier),
+                )
+                ? null
+                : const ProBadge(),
             onTap: () async {
-              final allowed = await ensureCanAddAccount(
-                context,
-                ref,
-                accountCount: accounts.length,
-              );
-              if (!allowed || !context.mounted) return;
               Navigator.pop(context);
               await showAddAccountChooser(context);
             },

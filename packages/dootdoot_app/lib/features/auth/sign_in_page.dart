@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pro_api/pro_api.dart';
 import 'package:tududi_api/tududi_api.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -93,6 +94,14 @@ class _SignInPageState extends ConsumerState<SignInPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (widget.addingAccount) {
+      final allowed = await ensureCanAddAccount(
+        context,
+        ref,
+        accountCount: ref.read(accountsProvider).length,
+      );
+      if (!allowed || !mounted) return;
+    }
     setState(() {
       _busy = true;
       _error = null;
@@ -147,8 +156,74 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     setState(() => _useApiToken = true);
   }
 
+  bool get _multiAccountLocked {
+    if (!widget.addingAccount) return false;
+    ref.watch(proControllerProvider);
+    return !canAddAccount(
+      accountCount: ref.watch(accountsProvider).length,
+      controller: ref.read(proControllerProvider.notifier),
+    );
+  }
+
+  Widget _buildProOnlyAddAccount(BuildContext context) {
+    final controller = ref.watch(proControllerProvider.notifier);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add account'),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Center(child: ProBadge()),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Multiple accounts with Pro',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Free includes one Tududi account. DootDoot Pro unlocks unlimited '
+              'accounts so you can switch between Cloud and self-hosted '
+              'servers — plus calendar, goals, habits, boards, and offline cache.',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 24),
+            if (controller.canPurchase) ...[
+              FilledButton(
+                onPressed: () async {
+                  await controller.purchase();
+                },
+                child: const Text('Unlock Pro'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await controller.restore();
+                },
+                child: const Text('Restore purchase'),
+              ),
+            ] else
+              Text(
+                'Get DootDoot Pro to add another account.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_multiAccountLocked) {
+      return _buildProOnlyAddAccount(context);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(

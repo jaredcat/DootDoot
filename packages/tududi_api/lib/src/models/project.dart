@@ -2,6 +2,45 @@ import 'package:equatable/equatable.dart';
 
 import 'tag.dart';
 
+/// Tududi project status values (snake_case strings from the API).
+abstract final class ProjectState {
+  static const planned = 'planned';
+  static const notStarted = 'not_started';
+  static const inProgress = 'in_progress';
+  static const waiting = 'waiting';
+  static const done = 'done';
+  static const cancelled = 'cancelled';
+
+  static String label(String? state) {
+    switch (state) {
+      case planned:
+        return 'Planned';
+      case notStarted:
+        return 'Not started';
+      case inProgress:
+        return 'In progress';
+      case waiting:
+        return 'Waiting';
+      case done:
+        return 'Done';
+      case cancelled:
+        return 'Cancelled';
+      case null:
+      case '':
+        return '';
+      default:
+        return state!
+            .split('_')
+            .where((part) => part.isNotEmpty)
+            .map(
+              (part) =>
+                  '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}',
+            )
+            .join(' ');
+    }
+  }
+}
+
 class TududiProject extends Equatable {
   const TududiProject({
     required this.id,

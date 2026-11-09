@@ -83,6 +83,7 @@ class TududiClient {
     String? status,
     int? projectId,
     String? projectUid,
+    String? areaUid,
     String? search,
   }) async {
     final query = <String, dynamic>{
@@ -90,6 +91,7 @@ class TududiClient {
       if (status != null) 'status': status,
       if (projectId != null) 'project_id': projectId,
       if (projectUid != null) 'project_uid': projectUid,
+      if (areaUid != null) 'area_uid': areaUid,
       if (search != null && search.isNotEmpty) 'search': search,
     };
     final data = await _get('/api/tasks', query: query);

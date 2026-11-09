@@ -98,29 +98,39 @@ class NotificationsSettingsPage extends ConsumerWidget {
                     ref.invalidate(notificationScheduleProvider);
                   },
           ),
-          if (isPro) ...[
-            const Divider(),
-            SwitchListTile(
-              title: const Text('Habit reminders'),
-              subtitle: const Text('Evening nudge for habits not done today'),
-              value: prefs.habitsEnabled,
-              onChanged: (value) async {
-                await prefs.setHabitsEnabled(value);
-                ref.invalidate(notificationPreferencesProvider);
-                ref.invalidate(notificationScheduleProvider);
-              },
+          const Divider(),
+          SwitchListTile(
+            title: const Text('Habit reminders'),
+            subtitle: Text(
+              isPro
+                  ? 'Evening nudge for habits not done today'
+                  : 'Pro enhancement',
             ),
-            SwitchListTile(
-              title: const Text('Goal deadlines'),
-              subtitle: const Text('Alert on a goal’s target date'),
-              value: prefs.goalsEnabled,
-              onChanged: (value) async {
-                await prefs.setGoalsEnabled(value);
-                ref.invalidate(notificationPreferencesProvider);
-                ref.invalidate(notificationScheduleProvider);
-              },
+            secondary: isPro ? null : const ProBadge(),
+            value: isPro && prefs.habitsEnabled,
+            onChanged: !isPro
+                ? null
+                : (value) async {
+                    await prefs.setHabitsEnabled(value);
+                    ref.invalidate(notificationPreferencesProvider);
+                    ref.invalidate(notificationScheduleProvider);
+                  },
+          ),
+          SwitchListTile(
+            title: const Text('Goal deadlines'),
+            subtitle: Text(
+              isPro ? 'Alert on a goal’s target date' : 'Pro enhancement',
             ),
-          ],
+            secondary: isPro ? null : const ProBadge(),
+            value: isPro && prefs.goalsEnabled,
+            onChanged: !isPro
+                ? null
+                : (value) async {
+                    await prefs.setGoalsEnabled(value);
+                    ref.invalidate(notificationPreferencesProvider);
+                    ref.invalidate(notificationScheduleProvider);
+                  },
+          ),
           const Divider(),
           ListTile(
             title: const Text('Background refresh'),

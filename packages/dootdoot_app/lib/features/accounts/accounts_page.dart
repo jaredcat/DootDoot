@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pro_api/pro_api.dart';
 
 import '../../core/providers.dart';
 import '../../core/widgets/add_account_chooser.dart';
@@ -17,7 +16,7 @@ class AccountsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Accounts')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddSheet(context, ref, accounts.length),
+        onPressed: () => showAddAccountChooser(context),
         icon: const Icon(Icons.add),
         label: const Text('Add account'),
       ),
@@ -107,20 +106,6 @@ class AccountsPage extends ConsumerWidget {
               },
             ),
     );
-  }
-
-  Future<void> _showAddSheet(
-    BuildContext context,
-    WidgetRef ref,
-    int accountCount,
-  ) async {
-    final allowed = await ensureCanAddAccount(
-      context,
-      ref,
-      accountCount: accountCount,
-    );
-    if (!allowed || !context.mounted) return;
-    await showAddAccountChooser(context);
   }
 
   Future<String?> _promptRename(BuildContext context, String current) {

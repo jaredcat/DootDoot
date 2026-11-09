@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tududi_api/tududi_api.dart';
 
 import '../tasks/task_providers.dart';
 
@@ -27,9 +28,10 @@ class ProjectsPage extends ConsumerWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final project = projects[index];
+                final stateLabel = ProjectState.label(project.state);
                 return ListTile(
                   title: Text(project.name),
-                  subtitle: project.state != null ? Text(project.state!) : null,
+                  subtitle: stateLabel.isNotEmpty ? Text(stateLabel) : null,
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     final uid = project.uid;

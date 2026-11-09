@@ -41,5 +41,12 @@ void main() {
       expect(task.tags.single.name, 'home');
       expect(task.isOpen, isTrue);
     });
+
+    test('formats project state labels', () {
+      expect(ProjectState.label('not_started'), 'Not started');
+      expect(ProjectState.label('in_progress'), 'In progress');
+      expect(ProjectState.label('planned'), 'Planned');
+      expect(ProjectState.label(null), '');
+    });
   });
 }

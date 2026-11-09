@@ -47,8 +47,8 @@ Future<bool> ensureCanAddAccount(
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'The free build supports one account. '
-          'Unlimited accounts are in the official Pro build.',
+          'Free includes one account. Unlimited accounts are available '
+          'with DootDoot Pro.',
         ),
       ),
     );
@@ -73,7 +73,7 @@ Future<void> openProFeature(
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'This enhancement is available in the official Pro build.',
+            'This enhancement is available with DootDoot Pro.',
           ),
         ),
       );

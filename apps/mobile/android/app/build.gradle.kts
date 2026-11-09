@@ -6,7 +6,10 @@ plugins {
 
 android {
     namespace = "com.codekitties.dootdoot"
-    compileSdk = flutter.compileSdkVersion
+    // API 37 is published as platforms;android-37.0. `compileSdk = 37` looks up
+    // android-37, which is not installed. Minor 0 selects android-37.0.
+    compileSdk = 37
+    compileSdkMinor = 0
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
