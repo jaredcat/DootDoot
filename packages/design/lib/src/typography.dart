@@ -11,7 +11,7 @@ abstract final class DootTypography {
         : DootColors.inkMuted;
 
     // Single sans family for all roles — no serif/display mix.
-    final sans = GoogleFonts.sourceSans3(
+    final sans = GoogleFonts.sora(
       color: base,
       height: 1.4,
     );
