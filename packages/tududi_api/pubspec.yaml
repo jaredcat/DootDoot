@@ -1,5 +1,5 @@
 name: tududi_api
-description: Typed REST client for Tududi.
+description: Typed REST client for tududi.
 version: 0.1.0
 publish_to: none
 

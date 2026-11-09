@@ -16,7 +16,7 @@ class TududiApiException implements Exception {
 }
 
 class TududiUnsupportedServerException implements Exception {
-  TududiUnsupportedServerException([this.message = 'Unsupported Tududi server']);
+  TududiUnsupportedServerException([this.message = 'Unsupported tududi server']);
 
   final String message;
 

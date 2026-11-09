@@ -56,7 +56,7 @@ class AccountsPage extends ConsumerWidget {
                             title: const Text('Remove account?'),
                             content: Text(
                               'Remove ${account.label} from this device? '
-                              'Your Tududi data on the server is not deleted.',
+                              'Your tududi data on the server is not deleted.',
                             ),
                             actions: [
                               TextButton(

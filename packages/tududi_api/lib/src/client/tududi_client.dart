@@ -71,7 +71,7 @@ class TududiClient {
       rethrow;
     } catch (e) {
       throw TududiUnsupportedServerException(
-        'Could not reach Tududi at $baseUrl',
+        'Could not reach tududi at $baseUrl',
       );
     }
   }

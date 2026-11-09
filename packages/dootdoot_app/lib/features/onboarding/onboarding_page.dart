@@ -33,7 +33,7 @@ class OnboardingPage extends StatelessWidget {
                 ),
                 const SizedBox(height: DootSpacing.sm),
                 Text(
-                  'An unofficial companion for Tududi',
+                  'An unofficial companion for tududi',
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: DootColors.inkMuted,
                   ),
@@ -41,7 +41,7 @@ class OnboardingPage extends StatelessWidget {
                 ),
                 const SizedBox(height: DootSpacing.md),
                 Text(
-                  'Connect to Tududi Cloud or your self-hosted server. '
+                  'Connect to tududi Cloud or your self-hosted server. '
                   'Not affiliated with tududi or Chris Veleris — your data stays on your server.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: DootColors.inkMuted,
@@ -51,7 +51,7 @@ class OnboardingPage extends StatelessWidget {
                 const Spacer(),
                 FilledButton(
                   onPressed: () => context.push('/sign-in?kind=cloud'),
-                  child: const Text('Continue with Tududi Cloud'),
+                  child: const Text('Continue with tududi Cloud'),
                 ),
                 const SizedBox(height: DootSpacing.sm),
                 OutlinedButton(

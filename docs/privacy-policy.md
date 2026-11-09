@@ -18,7 +18,7 @@ DootDoot does **not** operate a backend that stores your tasks, notes, or projec
 ## Account deletion
 
 - **Remove the DootDoot login from this device:** Settings → Sign out / Accounts → Remove. This deletes local tokens and offline cache for that account.
-- **Delete your Tududi account or export data:** use your Tududi server (Cloud: Profile settings; self-hosted: ask your admin). DootDoot cannot delete server-side data on your behalf beyond what the Tududi API allows while you are signed in.
+- **Delete your tududi account or export data:** use your tududi server (Cloud: Profile settings; self-hosted: ask your admin). DootDoot cannot delete server-side data on your behalf beyond what the tududi API allows while you are signed in.
 
 ## Contact
 

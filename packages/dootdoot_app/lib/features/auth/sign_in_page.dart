@@ -188,7 +188,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Free includes one Tududi account. DootDoot Pro unlocks unlimited '
+              'Free includes one tududi account. DootDoot Pro unlocks unlimited '
               'accounts so you can switch between Cloud and self-hosted '
               'servers — plus calendar, goals, habits, boards, and offline cache.',
               style: Theme.of(context).textTheme.bodyLarge,
@@ -229,7 +229,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
         title: Text(
           widget.addingAccount
               ? 'Add account'
-              : (_isCloud ? 'Tududi Cloud' : 'Self-hosted'),
+              : (_isCloud ? 'tududi Cloud' : 'Self-hosted'),
         ),
       ),
       // One group, and every field built up front (not a lazy list). iOS,
@@ -248,7 +248,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Unofficial app. Data stays on the Tududi server you connect to.',
+                  'Unofficial app. Data stays on the tududi server you connect to.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
@@ -256,7 +256,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   segments: const [
                     ButtonSegment(
                       value: 'cloud',
-                      label: Text('Tududi Cloud'),
+                      label: Text('tududi Cloud'),
                       icon: Icon(Icons.cloud_outlined),
                     ),
                     ButtonSegment(

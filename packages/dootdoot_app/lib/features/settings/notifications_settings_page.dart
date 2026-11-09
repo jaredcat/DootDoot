@@ -135,9 +135,9 @@ class NotificationsSettingsPage extends ConsumerWidget {
           ListTile(
             title: const Text('Background refresh'),
             subtitle: const Text(
-              'DootDoot periodically refreshes your Tududi data on this device '
+              'DootDoot periodically refreshes your tududi data on this device '
               'so reminders stay current. Timing is controlled by the OS and '
-              'needs network access to your Tududi server.',
+              'needs network access to your tududi server.',
             ),
             isThreeLine: true,
           ),

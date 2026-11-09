@@ -1,6 +1,6 @@
 # DootDoot
 
-Unofficial Flutter companion for [Tududi](https://tududi.com) v2.
+Unofficial Flutter companion for [tududi](https://tududi.com).
 
 Connect to **tududi Cloud** (`https://app.tududi.com`) or any self-hosted tududi instance. DootDoot is not affiliated with tududi or Chris Veleris — your data stays on *your* tududi server.
 

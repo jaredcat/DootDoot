@@ -63,7 +63,7 @@ class _NotificationBootstrapState extends ConsumerState<NotificationBootstrap> {
                 Text(
                   'DootDoot can remind you when tasks are due and send a morning '
                   'Today summary. Reminders stay on this device and refresh from '
-                  'your Tududi server in the background when the phone can reach it.',
+                  'your tududi server in the background when the phone can reach it.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),

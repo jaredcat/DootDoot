@@ -47,7 +47,7 @@ class _AddAccountChooserSheet extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.cloud_outlined),
-            title: const Text('Tududi Cloud'),
+            title: const Text('tududi Cloud'),
             subtitle: const Text('app.tududi.com'),
             trailing: locked ? const ProBadge() : null,
             onTap: () {
@@ -58,7 +58,7 @@ class _AddAccountChooserSheet extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.dns_outlined),
             title: const Text('Self-hosted server'),
-            subtitle: const Text('Your own Tududi URL'),
+            subtitle: const Text('Your own tududi URL'),
             trailing: locked ? const ProBadge() : null,
             onTap: () {
               Navigator.pop(context);

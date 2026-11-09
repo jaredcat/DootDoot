@@ -43,7 +43,7 @@ class SettingsPage extends ConsumerWidget {
             leading: const Icon(Icons.info_outline),
             title: const Text('About DootDoot'),
             subtitle: const Text(
-              'Unofficial Tududi companion. Not affiliated with tududi or Chris Veleris.',
+              'Unofficial tududi companion. Not affiliated with tududi or Chris Veleris.',
             ),
           ),
           ListTile(
@@ -58,7 +58,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.open_in_new),
-            title: const Text('Tududi documentation'),
+            title: const Text('tududi documentation'),
             onTap: () => launchUrl(
               Uri.parse('https://docs.tududi.com/'),
               mode: LaunchMode.externalApplication,
