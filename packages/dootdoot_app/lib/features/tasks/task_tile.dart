@@ -4,6 +4,7 @@ import 'package:tududi_api/tududi_api.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/widgets/swipe_action_tile.dart';
+import 'task_status_display.dart';
 
 class TaskTile extends StatelessWidget {
   const TaskTile({
@@ -31,6 +32,8 @@ class TaskTile extends StatelessWidget {
       'low' || '0' => DootColors.moss,
       _ => Theme.of(context).colorScheme.outline,
     };
+    final statusIcons = taskStatusIcons(task);
+    final outline = Theme.of(context).colorScheme.outline;
 
     final tile = ListTile(
       leading: IconButton(
@@ -50,10 +53,28 @@ class TaskTile extends StatelessWidget {
         ),
       ),
       subtitle: _subtitle(context),
-      trailing: Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(color: priorityColor, shape: BoxShape.circle),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final icon in statusIcons) ...[
+            Icon(
+              icon,
+              size: 16,
+              color: icon == Symbols.warning_amber
+                  ? DootColors.coral
+                  : outline,
+            ),
+            const SizedBox(width: 6),
+          ],
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: priorityColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
       ),
       onTap: onOpen,
     );
@@ -94,10 +115,13 @@ class TaskTile extends StatelessWidget {
   }
 
   Widget? _subtitle(BuildContext context) {
+    final project = task.projectName;
+    final due = task.dueDate;
+    // Icons cover overdue + repeating; spell out only project, due, workflow.
     final parts = <String>[
-      if (task.projectName != null && task.projectName!.isNotEmpty)
-        task.projectName!,
-      if (task.dueDate != null && task.dueDate!.isNotEmpty) task.dueDate!,
+      if (project != null && project.isNotEmpty) project,
+      if (due != null && due.isNotEmpty) due,
+      ?workflowStatusLabel(task),
     ];
     if (parts.isEmpty) return null;
     return Text(parts.join(' · '));

@@ -71,11 +71,12 @@ class ProjectDetailPage extends ConsumerWidget {
                       final taskUid = task.uid;
                       if (taskUid == null) return;
                       try {
+                        final done = !task.isDone;
                         final result = await ref
                             .read(offlineWriteCoordinatorProvider)
                             .completeTask(
                               taskUid,
-                              done: !task.isDone,
+                              done: done,
                               current: task,
                             );
                         final after = result.value.uid == taskUid
@@ -87,10 +88,12 @@ class ProjectDetailPage extends ConsumerWidget {
                                 after: after,
                               ),
                             );
-                        final msg = offlineQueuedMessage(result);
-                        if (msg != null && context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(msg)),
+                        if (context.mounted) {
+                          showTaskCompleteSnackBar(
+                            context,
+                            requestedDone: done,
+                            after: after,
+                            result: result,
                           );
                         }
                       } catch (e) {

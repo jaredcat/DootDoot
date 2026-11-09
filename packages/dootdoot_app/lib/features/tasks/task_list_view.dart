@@ -144,15 +144,11 @@ class TaskListView extends ConsumerWidget {
               TaskUpdateCommand(before: task, after: after),
             );
         if (context.mounted) {
-          final nextDue = after.dueDate;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                nextDue != null && nextDue.isNotEmpty
-                    ? 'Completed — next due $nextDue'
-                    : 'Completed — next occurrence scheduled',
-              ),
-            ),
+          showTaskCompleteSnackBar(
+            context,
+            requestedDone: done,
+            after: after,
+            result: result,
           );
         }
         return;
@@ -165,9 +161,13 @@ class TaskListView extends ConsumerWidget {
       ref.read(editHistoryProvider.notifier).push(
             TaskUpdateCommand(before: task, after: after),
           );
-      final msg = offlineQueuedMessage(result);
-      if (msg != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      if (context.mounted) {
+        showTaskCompleteSnackBar(
+          context,
+          requestedDone: done,
+          after: after,
+          result: result,
+        );
       }
     } catch (e) {
       ref.read(editOverlayProvider.notifier).setTask(uid, task);

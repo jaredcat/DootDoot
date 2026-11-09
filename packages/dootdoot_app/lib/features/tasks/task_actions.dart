@@ -7,6 +7,22 @@ import '../../core/edit_history/edit_commands.dart';
 import '../../core/edit_history/edit_history.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import 'task_providers.dart';
+import 'task_status_display.dart';
+
+/// Snackbar after complete/uncomplete (incl. recurring next-due).
+void showTaskCompleteSnackBar(
+  BuildContext context, {
+  required bool requestedDone,
+  required TududiTask after,
+  OfflineMutationResult<dynamic>? result,
+}) {
+  final msg = snackMessageForTaskComplete(
+    requestedDone: requestedDone,
+    after: after,
+    offlineQueued: result == null ? null : offlineQueuedMessage(result),
+  );
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+}
 
 const taskPriorityChoices = ['low', 'medium', 'high'];
 

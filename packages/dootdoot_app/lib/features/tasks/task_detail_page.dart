@@ -8,8 +8,10 @@ import '../../core/edit_history/edit_commands.dart';
 import '../../core/edit_history/edit_history.dart';
 import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
+import 'recurrence_picker.dart';
 import 'task_actions.dart';
 import 'task_providers.dart';
+import 'task_status_display.dart';
 
 class TaskDetailPage extends ConsumerStatefulWidget {
   const TaskDetailPage({super.key, required this.uid});
@@ -110,17 +112,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       // Recurring templates: tududi logs the completion then advances the same
       // task to the next due date with status back to not-started.
       if (done && !after.isDone) {
-        final nextDue = after.dueDate;
         if (mounted) {
           setState(() => _completedOverride = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                nextDue != null && nextDue.isNotEmpty
-                    ? 'Completed — next due $nextDue'
-                    : 'Completed — next occurrence scheduled',
-              ),
-            ),
+          showTaskCompleteSnackBar(
+            context,
+            requestedDone: done,
+            after: after,
+            result: result,
           );
         }
         ref.read(editHistoryProvider.notifier).push(
@@ -137,10 +135,14 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       ref.read(editHistoryProvider.notifier).push(
             TaskUpdateCommand(before: before, after: after),
           );
-      if (mounted) setState(() => _completedOverride = after.isDone);
-      final msg = offlineQueuedMessage(result);
-      if (msg != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      if (mounted) {
+        setState(() => _completedOverride = after.isDone);
+        showTaskCompleteSnackBar(
+          context,
+          requestedDone: done,
+          after: after,
+          result: result,
+        );
       }
     } catch (e) {
       ref.read(editOverlayProvider.notifier).setTask(widget.uid, before);
@@ -175,6 +177,17 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _pickRecurrence(TududiTask task) async {
+    final draft = await showRecurrencePicker(context, task: task);
+    if (draft == null || !mounted) return;
+    final label = draft.previewLabel;
+    await _patch(
+      task,
+      draft.toPatchBody(),
+      successMessage: draft.isActive ? 'Repeats: $label' : 'Does not repeat',
+    );
   }
 
   Future<void> _pickStatus(TududiTask task) async {
@@ -488,6 +501,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 subtitle: Text(_dueSubtitle(task)),
                 trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickDue(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Repeat'),
+                subtitle: Text(recurrenceLabel(task) ?? 'Does not repeat'),
+                trailing: const Icon(Symbols.chevron_right),
+                onTap: _saving ? null : () => _pickRecurrence(task),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,

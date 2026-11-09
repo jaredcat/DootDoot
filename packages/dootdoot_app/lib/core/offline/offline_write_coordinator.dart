@@ -158,7 +158,40 @@ class OfflineWriteCoordinator {
         tags: fallback.tags,
         subtasks: fallback.subtasks,
         completedAt: fallback.completedAt,
-        recurrenceType: fallback.recurrenceType,
+        recurrenceType: body.containsKey('recurrence_type')
+            ? body['recurrence_type']?.toString()
+            : fallback.recurrenceType,
+        recurrenceInterval: body.containsKey('recurrence_interval')
+            ? (body['recurrence_interval'] is int
+                ? body['recurrence_interval'] as int
+                : int.tryParse(body['recurrence_interval']?.toString() ?? ''))
+            : fallback.recurrenceInterval,
+        recurrenceWeekday: body.containsKey('recurrence_weekday')
+            ? (body['recurrence_weekday'] is int
+                ? body['recurrence_weekday'] as int
+                : int.tryParse(body['recurrence_weekday']?.toString() ?? ''))
+            : fallback.recurrenceWeekday,
+        recurrenceWeekdays: body.containsKey('recurrence_weekdays')
+            ? _asIntList(body['recurrence_weekdays'])
+            : fallback.recurrenceWeekdays,
+        recurrenceMonthDay: body.containsKey('recurrence_month_day')
+            ? (body['recurrence_month_day'] is int
+                ? body['recurrence_month_day'] as int
+                : int.tryParse(body['recurrence_month_day']?.toString() ?? ''))
+            : fallback.recurrenceMonthDay,
+        recurrenceWeekOfMonth: body.containsKey('recurrence_week_of_month')
+            ? (body['recurrence_week_of_month'] is int
+                ? body['recurrence_week_of_month'] as int
+                : int.tryParse(
+                    body['recurrence_week_of_month']?.toString() ?? '',
+                  ))
+            : fallback.recurrenceWeekOfMonth,
+        recurrenceEndDate: body.containsKey('recurrence_end_date')
+            ? body['recurrence_end_date']?.toString()
+            : fallback.recurrenceEndDate,
+        completionBased: body.containsKey('completion_based')
+            ? body['completion_based'] == true
+            : fallback.completionBased,
         originalName: fallback.originalName,
         todayMoveCount: fallback.todayMoveCount,
       );
@@ -830,7 +863,24 @@ class OfflineWriteCoordinator {
         'project_name': t.projectName,
         if (t.note != null) 'note': t.note,
         if (t.completedAt != null) 'completed_at': t.completedAt,
+        ...t.recurrenceToJson(),
       };
+
+  static List<int> _asIntList(Object? raw) {
+    if (raw is! List) return const [];
+    return [
+      for (final item in raw)
+        if (item is int)
+          item
+        else if (item is num)
+          item.toInt()
+        else
+          ...[
+            if (int.tryParse(item.toString()) != null)
+              int.parse(item.toString()),
+          ],
+    ];
+  }
 
   static Map<String, dynamic> _noteJson(TududiNote n) => {
         'id': n.id,
