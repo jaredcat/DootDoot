@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/providers.dart';
 
@@ -68,7 +69,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.search),
+                : const Icon(Symbols.search),
           ),
         ],
       ),
@@ -83,7 +84,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     final name = (t['name'] ?? t['original_name'] ?? 'Task')
                         .toString();
                     return ListTile(
-                      leading: const Icon(Icons.check_circle_outline),
+                      leading: const Icon(Symbols.check_circle),
                       title: Text(name),
                       onTap: uid == null
                           ? null
@@ -96,7 +97,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   ...projects.whereType<Map>().map((p) {
                     final uid = p['uid']?.toString();
                     return ListTile(
-                      leading: const Icon(Icons.folder_outlined),
+                      leading: const Icon(Symbols.folder),
                       title: Text((p['name'] ?? 'Project').toString()),
                       onTap: uid == null
                           ? null
@@ -109,7 +110,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   ...notes.whereType<Map>().map((n) {
                     final uid = n['uid']?.toString();
                     return ListTile(
-                      leading: const Icon(Icons.notes_outlined),
+                      leading: const Icon(Symbols.notes),
                       title: Text(
                         (n['title'] ?? n['name'] ?? 'Note').toString(),
                       ),

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
-import '../../core/offline/sync_status_button.dart';
 import '../../core/providers.dart';
+import '../../core/widgets/shell_app_bar_actions.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -18,7 +19,7 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
-        actions: const [SyncStatusButton()],
+        actions: const [ShellAppBarActions()],
       ),
       body: ListView(
         children: [
@@ -29,29 +30,35 @@ class SettingsPage extends ConsumerWidget {
               isThreeLine: true,
             ),
             ListTile(
-              leading: const Icon(Icons.switch_account_outlined),
+              leading: const Icon(Symbols.switch_account),
               title: const Text('Manage accounts'),
               onTap: () => context.push('/more/accounts'),
             ),
             ListTile(
-              leading: const Icon(Icons.notifications_outlined),
+              leading: const Icon(Symbols.notifications),
               title: const Text('Notifications'),
               subtitle: const Text('Reminders, Today summary, system settings'),
               onTap: () => context.push('/more/settings/notifications'),
+            ),
+            ListTile(
+              leading: const Icon(Symbols.wb_sunny),
+              title: const Text('Today'),
+              subtitle: const Text('Show or hide Overdue, Suggested, Completed'),
+              onTap: () => context.push('/more/settings/today'),
             ),
           ],
           const Divider(),
           ...controller.buildSettingsTiles(context, ref),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.info_outline),
+            leading: const Icon(Symbols.info),
             title: const Text('About DootDoot'),
             subtitle: const Text(
               'Unofficial tududi companion. Not affiliated with tududi or Chris Veleris.',
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.privacy_tip_outlined),
+            leading: const Icon(Symbols.privacy_tip),
             title: const Text('Privacy policy'),
             onTap: () => launchUrl(
               Uri.parse(
@@ -61,7 +68,7 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.open_in_new),
+            leading: const Icon(Symbols.open_in_new),
             title: const Text('tududi documentation'),
             onTap: () => launchUrl(
               Uri.parse('https://docs.tududi.com/'),
@@ -71,7 +78,7 @@ class SettingsPage extends ConsumerWidget {
           const Divider(),
           ListTile(
             leading: Icon(
-              Icons.logout,
+              Symbols.logout,
               color: Theme.of(context).colorScheme.error,
             ),
             title: Text(

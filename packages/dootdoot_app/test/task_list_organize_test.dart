@@ -1,4 +1,5 @@
 import 'package:dootdoot_app/features/tasks/task_list_organize.dart';
+import 'package:dootdoot_app/features/tasks/today_section_prefs.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tududi_api/tududi_api.dart';
 
@@ -73,6 +74,30 @@ void main() {
       expect(sections[2].tasks.single.name, 'Suggestion');
       expect(sections[3].tasks.single.name, 'Done');
     });
+
+    test('respects section visibility (planned always kept)', () {
+      final sections = organizeTodaySections(
+        [
+          task(id: 1, name: 'Overdue', dueDate: '2026-11-01'),
+          task(
+            id: 2,
+            name: 'In progress',
+            status: TaskStatus.inProgress,
+          ),
+          task(id: 3, name: 'Suggestion', dueDate: '2026-11-08'),
+          task(id: 4, name: 'Done', status: TaskStatus.done),
+        ],
+        now: now,
+        visibility: const TodaySectionVisibility(
+          showOverdue: false,
+          showSuggested: false,
+          showCompleted: false,
+        ),
+      );
+
+      expect(sections.map((s) => s.title).toList(), ['Planned']);
+      expect(sections.single.tasks.single.name, 'In progress');
+    });
   });
 
   group('organizeUpcomingSections', () {
@@ -122,6 +147,55 @@ void main() {
       );
 
       expect(sections.single.tasks.single.name, 'Done');
+    });
+
+    test('name sort flattens across days', () {
+      final sections = organizeUpcomingSections(
+        [
+          task(id: 1, name: 'Zebra', dueDate: '2026-11-08'),
+          task(id: 2, name: 'Apple', dueDate: '2026-11-09'),
+        ],
+        statusFilter: UpcomingStatusFilter.active,
+        sort: const UpcomingSort(
+          field: UpcomingSortField.name,
+          ascending: true,
+        ),
+        now: now,
+      );
+
+      expect(sections.single.title, 'Name');
+      expect(sections.single.tasks.map((t) => t.name), ['Apple', 'Zebra']);
+    });
+
+    test('priority sort flattens across days', () {
+      final sections = organizeUpcomingSections(
+        [
+          task(
+            id: 1,
+            name: 'Later high',
+            dueDate: '2026-11-09',
+            priority: 'high',
+          ),
+          task(
+            id: 2,
+            name: 'Today low',
+            dueDate: '2026-11-08',
+            priority: 'low',
+          ),
+        ],
+        statusFilter: UpcomingStatusFilter.active,
+        sort: const UpcomingSort(
+          field: UpcomingSortField.priority,
+          ascending: true,
+        ),
+        now: now,
+      );
+
+      expect(sections.single.title, 'Priority');
+      expect(sections.single.tasks.map((t) => t.name), [
+        'Later high',
+        'Today low',
+      ]);
     });
   });
 }

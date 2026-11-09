@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
+import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import 'task_actions.dart';
 import 'task_list_organize.dart';
 import 'task_providers.dart';
 import 'task_tile.dart';
+import 'today_section_prefs.dart';
+import 'upcoming_sort_prefs.dart';
 
 export 'task_providers.dart' show TaskListFilter;
 
@@ -32,14 +38,17 @@ class TaskListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(tasksProvider(filter));
+    final overlay = ref.watch(editOverlayProvider);
 
     return async.when(
+      skipLoadingOnReload: true,
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => _ErrorPane(
         message: e.toString(),
         onRetry: () => ref.invalidate(tasksProvider(filter)),
       ),
-      data: (tasks) {
+      data: (rawTasks) {
+        final tasks = mergeTaskOverlay(rawTasks, overlay.tasks);
         return switch (filter) {
           TaskListFilter.today => _TodayTaskList(
               tasks: tasks,
@@ -115,15 +124,59 @@ class TaskListView extends ConsumerWidget {
   ) async {
     final uid = task.uid;
     if (uid == null) return;
-    final result = await ref.read(offlineWriteCoordinatorProvider).completeTask(
-          uid,
-          done: !task.isDone,
-          current: task,
+    final done = !task.isDone;
+    final optimistic = task.copyWith(
+      status: done ? TaskStatus.done : TaskStatus.notStarted,
+    );
+    ref.read(editOverlayProvider.notifier).setTask(uid, optimistic);
+    try {
+      final result =
+          await ref.read(offlineWriteCoordinatorProvider).completeTask(
+                uid,
+                done: done,
+                current: task,
+              );
+      var after =
+          result.value.uid == uid ? result.value : result.value.copyWith(uid: uid);
+      if (done && !after.isDone) {
+        // Recurring template advanced to the next occurrence.
+        ref.read(editHistoryProvider.notifier).push(
+              TaskUpdateCommand(before: task, after: after),
+            );
+        if (context.mounted) {
+          final nextDue = after.dueDate;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                nextDue != null && nextDue.isNotEmpty
+                    ? 'Completed — next due $nextDue'
+                    : 'Completed — next occurrence scheduled',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      if (after.isDone != done) {
+        after = after.copyWith(
+          status: done ? TaskStatus.done : TaskStatus.notStarted,
         );
-    ref.invalidate(tasksProvider(filter));
-    final msg = offlineQueuedMessage(result);
-    if (msg != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+      ref.read(editHistoryProvider.notifier).push(
+            TaskUpdateCommand(before: task, after: after),
+          );
+      final msg = offlineQueuedMessage(result);
+      if (msg != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (e) {
+      ref.read(editOverlayProvider.notifier).setTask(uid, task);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      ref.invalidate(tasksProvider(filter));
     }
   }
 }
@@ -178,7 +231,7 @@ class _FlatTaskList extends StatelessWidget {
   }
 }
 
-class _TodayTaskList extends StatelessWidget {
+class _TodayTaskList extends ConsumerWidget {
   const _TodayTaskList({
     required this.tasks,
     required this.onRefresh,
@@ -196,37 +249,69 @@ class _TodayTaskList extends StatelessWidget {
   final Future<void> Function(TududiTask task) onPickPriority;
 
   @override
-  Widget build(BuildContext context) {
-    final sections = organizeTodaySections(tasks);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final visibility = ref.watch(todaySectionVisibilityProvider);
+    final sections = organizeTodaySections(tasks, visibility: visibility);
     if (sections.isEmpty) {
-      return _EmptyRefreshList(
-        label: 'Nothing for today',
-        onRefresh: onRefresh,
+      return Column(
+        children: [
+          _TodayToolbar(),
+          Expanded(
+            child: _EmptyRefreshList(
+              label: 'Nothing for today',
+              onRefresh: onRefresh,
+            ),
+          ),
+        ],
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          for (final section in sections) ...[
-            _SectionHeader(title: section.title, count: section.tasks.length),
-            ...section.tasks.map(
-              (task) => TaskTile(
-                task: task,
-                onToggle: () => onToggle(task),
-                onOpen: () {
-                  final uid = task.uid;
-                  if (uid != null) context.push('/task/$uid');
-                },
-                onDelete: () => onDelete(task),
-                onDueToday: () => onDueToday(task),
-                onPickPriority: () => onPickPriority(task),
-              ),
+    return Column(
+      children: [
+        _TodayToolbar(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: onRefresh,
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                for (final section in sections) ...[
+                  _SectionHeader(
+                    title: section.title,
+                    count: section.tasks.length,
+                  ),
+                  ...section.tasks.map(
+                    (task) => TaskTile(
+                      task: task,
+                      onToggle: () => onToggle(task),
+                      onOpen: () {
+                        final uid = task.uid;
+                        if (uid != null) context.push('/task/$uid');
+                      },
+                      onDelete: () => onDelete(task),
+                      onDueToday: () => onDueToday(task),
+                      onPickPriority: () => onPickPriority(task),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TodayToolbar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: IconButton(
+        tooltip: 'Today settings',
+        onPressed: () => context.push('/more/settings/today'),
+        icon: const Icon(Symbols.tune),
       ),
     );
   }
@@ -252,31 +337,85 @@ class _UpcomingTaskList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusFilter = ref.watch(upcomingStatusFilterProvider);
+    final sort = ref.watch(upcomingSortProvider);
     final sections = organizeUpcomingSections(
       tasks,
       statusFilter: statusFilter,
+      sort: sort,
     );
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: SegmentedButton<UpcomingStatusFilter>(
-            // The check icon makes "Completed" wrap onto a second line.
-            showSelectedIcon: false,
-            segments: [
-              for (final value in UpcomingStatusFilter.values)
-                ButtonSegment(
-                  value: value,
-                  label: Text(value.label, maxLines: 1),
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: SegmentedButton<UpcomingStatusFilter>(
+                  // The check icon makes "Completed" wrap onto a second line.
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final value in UpcomingStatusFilter.values)
+                      ButtonSegment(
+                        value: value,
+                        label: Text(value.label, maxLines: 1),
+                      ),
+                  ],
+                  selected: {statusFilter},
+                  onSelectionChanged: (next) {
+                    ref
+                        .read(upcomingStatusFilterProvider.notifier)
+                        .setFilter(next.first);
+                  },
                 ),
+              ),
+              PopupMenuButton<_UpcomingSortAction>(
+                tooltip: 'Sort',
+                icon: const Icon(Symbols.sort),
+                onSelected: (action) async {
+                  final notifier = ref.read(upcomingSortProvider.notifier);
+                  switch (action) {
+                    case _UpcomingSortAction.priority:
+                      await notifier.update(
+                        sort.copyWith(field: UpcomingSortField.priority),
+                      );
+                    case _UpcomingSortAction.dueDate:
+                      await notifier.update(
+                        sort.copyWith(field: UpcomingSortField.dueDate),
+                      );
+                    case _UpcomingSortAction.name:
+                      await notifier.update(
+                        sort.copyWith(field: UpcomingSortField.name),
+                      );
+                    case _UpcomingSortAction.toggleDirection:
+                      await notifier.update(
+                        sort.copyWith(ascending: !sort.ascending),
+                      );
+                  }
+                },
+                itemBuilder: (context) => [
+                  for (final field in UpcomingSortField.values)
+                    CheckedPopupMenuItem(
+                      value: switch (field) {
+                        UpcomingSortField.priority =>
+                          _UpcomingSortAction.priority,
+                        UpcomingSortField.dueDate =>
+                          _UpcomingSortAction.dueDate,
+                        UpcomingSortField.name => _UpcomingSortAction.name,
+                      },
+                      checked: sort.field == field,
+                      child: Text(field.label),
+                    ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: _UpcomingSortAction.toggleDirection,
+                    child: Text(
+                      sort.ascending ? 'Ascending' : 'Descending',
+                    ),
+                  ),
+                ],
+              ),
             ],
-            selected: {statusFilter},
-            onSelectionChanged: (next) {
-              ref
-                  .read(upcomingStatusFilterProvider.notifier)
-                  .setFilter(next.first);
-            },
           ),
         ),
         Expanded(
@@ -322,6 +461,8 @@ class _UpcomingTaskList extends ConsumerWidget {
     );
   }
 }
+
+enum _UpcomingSortAction { priority, dueDate, name, toggleDirection }
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, required this.count});
@@ -370,7 +511,7 @@ class _EmptyRefreshList extends StatelessWidget {
         children: [
           SizedBox(height: MediaQuery.sizeOf(context).height * 0.25),
           Icon(
-            Icons.check_circle_outline,
+            Symbols.check_circle,
             size: 48,
             color: Theme.of(context).colorScheme.outline,
           ),

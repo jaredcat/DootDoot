@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
 import 'package:tududi_api/tududi_api.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/providers.dart';
 
@@ -257,12 +258,12 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     ButtonSegment(
                       value: 'cloud',
                       label: Text('tududi Cloud'),
-                      icon: Icon(Icons.cloud_outlined),
+                      icon: Icon(Symbols.cloud),
                     ),
                     ButtonSegment(
                       value: 'self',
                       label: Text('Self-hosted'),
-                      icon: Icon(Icons.dns_outlined),
+                      icon: Icon(Symbols.dns),
                     ),
                   ],
                   selected: {_kind},

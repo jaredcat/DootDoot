@@ -2,6 +2,7 @@ import 'package:dootdoot_design/dootdoot_design.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/edit_history/edit_history.dart';
 import 'core/notifications/notification_bootstrap.dart';
 import 'core/notifications/notification_providers.dart';
 import 'core/offline/connectivity_sync.dart';
@@ -45,8 +46,18 @@ class _DootdootAppState extends ConsumerState<DootdootApp>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.read(offlineWriteCoordinatorProvider).drain();
+    switch (state) {
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        // Flush coalesced undo/redo writes before the process may be suspended.
+        // Skip `inactive` (dialogs / app switcher peek) to avoid write storms.
+        ref.read(editHistoryProvider.notifier).flushPending();
+        ref.read(offlineWriteCoordinatorProvider).drain();
+      case AppLifecycleState.resumed:
+        ref.read(offlineWriteCoordinatorProvider).drain();
+      case AppLifecycleState.inactive:
+        break;
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:dootdoot_design/dootdoot_design.dart';
 import 'package:flutter/material.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/widgets/swipe_action_tile.dart';
 
@@ -35,7 +36,8 @@ class TaskTile extends StatelessWidget {
       leading: IconButton(
         onPressed: onToggle,
         icon: Icon(
-          task.isDone ? Icons.check_circle : Icons.circle_outlined,
+          task.isDone ? Symbols.check_circle : Symbols.circle,
+          fill: task.isDone ? 1 : 0,
           color: task.isDone
               ? DootColors.moss
               : Theme.of(context).colorScheme.outline,
@@ -60,7 +62,7 @@ class TaskTile extends StatelessWidget {
       if (onDueToday != null)
         SwipeAction(
           label: 'Today',
-          icon: Icons.today_outlined,
+          icon: Symbols.today,
           onPressed: onDueToday!,
           backgroundColor: DootColors.sea,
           foregroundColor: Colors.white,
@@ -68,7 +70,7 @@ class TaskTile extends StatelessWidget {
       if (onPickPriority != null)
         SwipeAction(
           label: 'Priority',
-          icon: Icons.flag_outlined,
+          icon: Symbols.flag,
           onPressed: onPickPriority!,
           backgroundColor: DootColors.amber,
           foregroundColor: Colors.white,
@@ -76,7 +78,7 @@ class TaskTile extends StatelessWidget {
       if (onDelete != null)
         SwipeAction(
           label: 'Delete',
-          icon: Icons.delete_outline,
+          icon: Symbols.delete,
           onPressed: onDelete!,
           backgroundColor: DootColors.coral,
           foregroundColor: Colors.white,

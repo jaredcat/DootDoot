@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Built-in or entity shortcut that can appear on the Pro custom bottom bar.
 enum NavPinKind {
@@ -46,49 +47,31 @@ class NavPin {
       kind == NavPinKind.area ||
       kind == NavPinKind.note;
 
+  /// Outlined Material Symbol. Use `Icon(icon, fill: 1)` when selected.
   IconData get icon {
     return switch (kind) {
-      NavPinKind.today => Icons.wb_sunny_outlined,
-      NavPinKind.upcoming => Icons.calendar_view_week_outlined,
-      NavPinKind.inbox => Icons.inbox_outlined,
-      NavPinKind.someday => Icons.beach_access_outlined,
-      NavPinKind.projects => Icons.folder_outlined,
-      NavPinKind.areas => Icons.layers_outlined,
-      NavPinKind.notes => Icons.notes_outlined,
-      NavPinKind.search => Icons.search,
-      NavPinKind.settings => Icons.settings_outlined,
-      NavPinKind.accounts => Icons.switch_account_outlined,
-      NavPinKind.calendar => Icons.calendar_month_outlined,
-      NavPinKind.goals => Icons.flag_outlined,
-      NavPinKind.habits => Icons.loop,
-      NavPinKind.boards => Icons.view_kanban_outlined,
-      NavPinKind.project => Icons.folder,
-      NavPinKind.area => Icons.layers,
-      NavPinKind.note => Icons.sticky_note_2_outlined,
+      NavPinKind.today => Symbols.wb_sunny,
+      NavPinKind.upcoming => Symbols.calendar_view_week,
+      NavPinKind.inbox => Symbols.inbox,
+      NavPinKind.someday => Symbols.beach_access,
+      NavPinKind.projects => Symbols.folder,
+      NavPinKind.areas => Symbols.layers,
+      NavPinKind.notes => Symbols.notes,
+      NavPinKind.search => Symbols.search,
+      NavPinKind.settings => Symbols.settings,
+      NavPinKind.accounts => Symbols.switch_account,
+      NavPinKind.calendar => Symbols.calendar_month,
+      NavPinKind.goals => Symbols.flag,
+      NavPinKind.habits => Symbols.loop,
+      NavPinKind.boards => Symbols.view_kanban,
+      NavPinKind.project => Symbols.folder,
+      NavPinKind.area => Symbols.layers,
+      NavPinKind.note => Symbols.sticky_note_2,
     };
   }
 
-  IconData get selectedIcon {
-    return switch (kind) {
-      NavPinKind.today => Icons.wb_sunny,
-      NavPinKind.upcoming => Icons.calendar_view_week,
-      NavPinKind.inbox => Icons.inbox,
-      NavPinKind.someday => Icons.beach_access,
-      NavPinKind.projects => Icons.folder,
-      NavPinKind.areas => Icons.layers,
-      NavPinKind.notes => Icons.notes,
-      NavPinKind.search => Icons.search,
-      NavPinKind.settings => Icons.settings,
-      NavPinKind.accounts => Icons.switch_account,
-      NavPinKind.calendar => Icons.calendar_month,
-      NavPinKind.goals => Icons.flag,
-      NavPinKind.habits => Icons.loop,
-      NavPinKind.boards => Icons.view_kanban,
-      NavPinKind.project => Icons.folder,
-      NavPinKind.area => Icons.layers,
-      NavPinKind.note => Icons.sticky_note_2,
-    };
-  }
+  /// Same glyph as [icon]; callers should set `Icon(..., fill: 1)` when selected.
+  IconData get selectedIcon => icon;
 
   /// Routes under `/more` that this pin duplicates when pinned.
   String? get moreRouteToHide {

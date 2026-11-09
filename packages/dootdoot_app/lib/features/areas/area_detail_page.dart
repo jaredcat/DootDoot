@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
+import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_actions.dart';
@@ -45,8 +48,10 @@ class AreaDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(areaDetailProvider(uid));
+    final overlay = ref.watch(editOverlayProvider);
 
     return async.when(
+      skipLoadingOnReload: true,
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
@@ -55,7 +60,7 @@ class AreaDetailPage extends ConsumerWidget {
       ),
       data: (data) {
         final area = data.$1;
-        final tasks = data.$2;
+        final tasks = mergeTaskOverlay(data.$2, overlay.tasks);
         return Scaffold(
           appBar: AppBar(title: Text(area.name)),
           body: RefreshIndicator(
@@ -80,19 +85,37 @@ class AreaDetailPage extends ConsumerWidget {
                     onToggle: () async {
                       final taskUid = task.uid;
                       if (taskUid == null) return;
-                      final result = await ref
-                          .read(offlineWriteCoordinatorProvider)
-                          .completeTask(
-                            taskUid,
-                            done: !task.isDone,
-                            current: task,
+                      try {
+                        final result = await ref
+                            .read(offlineWriteCoordinatorProvider)
+                            .completeTask(
+                              taskUid,
+                              done: !task.isDone,
+                              current: task,
+                            );
+                        final after = result.value.uid == taskUid
+                            ? result.value
+                            : result.value.copyWith(uid: taskUid);
+                        ref.read(editHistoryProvider.notifier).push(
+                              TaskUpdateCommand(
+                                before: task,
+                                after: after,
+                              ),
+                            );
+                        final msg = offlineQueuedMessage(result);
+                        if (msg != null && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(msg)),
                           );
-                      ref.invalidate(areaDetailProvider(uid));
-                      final msg = offlineQueuedMessage(result);
-                      if (msg != null && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(msg)),
-                        );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(e.toString())),
+                          );
+                        }
+                      } finally {
+                        ref.invalidate(areaDetailProvider(uid));
                       }
                     },
                     onOpen: () {

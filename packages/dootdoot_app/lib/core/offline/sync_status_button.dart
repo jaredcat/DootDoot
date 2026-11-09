@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_api/pro_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../providers.dart';
 import 'drift/drift_offline_cache.dart';
@@ -23,10 +24,10 @@ class SyncStatusButton extends ConsumerWidget {
     }
 
     final icon = status.conflictCount > 0
-        ? Icons.warning_amber_outlined
+        ? Symbols.warning_amber
         : status.offline
-            ? Icons.cloud_off_outlined
-            : Icons.cloud_upload_outlined;
+            ? Symbols.cloud_off
+            : Symbols.cloud_upload;
     final tooltip = status.conflictCount > 0
         ? '${status.conflictCount} sync conflict(s)'
         : status.offline
@@ -99,7 +100,7 @@ class SyncStatusButton extends ConsumerWidget {
                       contentPadding: EdgeInsets.zero,
                       title: Text(title),
                       subtitle: const Text('Tap to resolve'),
-                      trailing: const Icon(Icons.chevron_right),
+                      trailing: const Icon(Symbols.chevron_right),
                       onTap: outboxId == null
                           ? null
                           : () async {

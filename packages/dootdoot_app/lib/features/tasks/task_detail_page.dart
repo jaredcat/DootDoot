@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
+import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import 'task_actions.dart';
 import 'task_providers.dart';
@@ -21,6 +25,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   final _noteController = TextEditingController();
   bool _initialized = false;
   bool _saving = false;
+  /// Local switch value so the Completed toggle flips before the network returns.
+  bool? _completedOverride;
 
   @override
   void dispose() {
@@ -60,6 +66,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         },
         current: task,
       );
+      ref.read(editHistoryProvider.notifier).push(
+            TaskUpdateCommand(before: task, after: result.value),
+          );
       _invalidateTaskLists();
       if (mounted) {
         final offlineMsg = offlineQueuedMessage(result);
@@ -77,16 +86,71 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     }
   }
 
-  Future<void> _toggleDone(TududiTask task) async {
-    final result = await ref.read(offlineWriteCoordinatorProvider).completeTask(
-          widget.uid,
-          done: !task.isDone,
-          current: task,
+  Future<void> _toggleDone(TududiTask task, bool done) async {
+    final before =
+        task.uid == widget.uid ? task : task.copyWith(uid: widget.uid);
+    final optimistic = before.copyWith(
+      status: done ? TaskStatus.done : TaskStatus.notStarted,
+    );
+    // Flip the switch and Status row immediately — don't wait on the network.
+    setState(() => _completedOverride = done);
+    ref.read(editOverlayProvider.notifier).setTask(widget.uid, optimistic);
+
+    try {
+      final result =
+          await ref.read(offlineWriteCoordinatorProvider).completeTask(
+                widget.uid,
+                done: done,
+                current: before,
+              );
+      var after = result.value.uid == widget.uid
+          ? result.value
+          : result.value.copyWith(uid: widget.uid);
+
+      // Recurring templates: tududi logs the completion then advances the same
+      // task to the next due date with status back to not-started.
+      if (done && !after.isDone) {
+        final nextDue = after.dueDate;
+        if (mounted) {
+          setState(() => _completedOverride = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                nextDue != null && nextDue.isNotEmpty
+                    ? 'Completed — next due $nextDue'
+                    : 'Completed — next occurrence scheduled',
+              ),
+            ),
+          );
+        }
+        ref.read(editHistoryProvider.notifier).push(
+              TaskUpdateCommand(before: before, after: after),
+            );
+        return;
+      }
+
+      if (after.isDone != done) {
+        after = after.copyWith(
+          status: done ? TaskStatus.done : TaskStatus.notStarted,
         );
-    _invalidateTaskLists();
-    final msg = offlineQueuedMessage(result);
-    if (msg != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+      ref.read(editHistoryProvider.notifier).push(
+            TaskUpdateCommand(before: before, after: after),
+          );
+      if (mounted) setState(() => _completedOverride = after.isDone);
+      final msg = offlineQueuedMessage(result);
+      if (msg != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    } catch (e) {
+      ref.read(editOverlayProvider.notifier).setTask(widget.uid, before);
+      if (mounted) {
+        setState(() => _completedOverride = before.isDone);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      _invalidateTaskLists();
     }
   }
 
@@ -133,7 +197,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 ListTile(
                   title: Text(TaskStatus.label(status)),
                   trailing: status == task.status
-                      ? const Icon(Icons.check)
+                      ? const Icon(Symbols.check)
                       : null,
                   onTap: () => Navigator.of(context).pop(status),
                 ),
@@ -164,22 +228,22 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.today_outlined),
+                leading: const Icon(Symbols.today),
                 title: const Text('Today'),
                 onTap: () => Navigator.of(context).pop('today'),
               ),
               ListTile(
-                leading: const Icon(Icons.event_outlined),
+                leading: const Icon(Symbols.event),
                 title: const Text('Tomorrow'),
                 onTap: () => Navigator.of(context).pop('tomorrow'),
               ),
               ListTile(
-                leading: const Icon(Icons.calendar_month_outlined),
+                leading: const Icon(Symbols.calendar_month),
                 title: const Text('Pick date…'),
                 onTap: () => Navigator.of(context).pop('pick'),
               ),
               ListTile(
-                leading: const Icon(Icons.beach_access_outlined),
+                leading: const Icon(Symbols.beach_access),
                 title: const Text('Clear due'),
                 onTap: () => Navigator.of(context).pop('clear'),
               ),
@@ -268,7 +332,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               ListTile(
                 title: const Text('Inbox (no project)'),
                 trailing: task.projectId == null && task.projectUid == null
-                    ? const Icon(Icons.check)
+                    ? const Icon(Symbols.check)
                     : null,
                 onTap: () => Navigator.of(context).pop('inbox'),
               ),
@@ -278,7 +342,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                   trailing: (project.uid != null &&
                               project.uid == task.projectUid) ||
                           project.id == task.projectId
-                      ? const Icon(Icons.check)
+                      ? const Icon(Symbols.check)
                       : null,
                   onTap: () => Navigator.of(context).pop(project),
                 ),
@@ -337,6 +401,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(taskDetailProvider(widget.uid));
+    final overlay = ref.watch(editOverlayProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -345,7 +410,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           async.maybeWhen(
             data: (task) => PopupMenuButton<String>(
               onSelected: (value) {
-                if (value == 'delete') _delete(task);
+                if (value == 'delete') {
+                  _delete(overlayTaskOr(widget.uid, task, overlay) ?? task);
+                }
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(
@@ -365,16 +432,18 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.check),
+                  : const Icon(Symbols.check),
             ),
             orElse: () => const SizedBox.shrink(),
           ),
         ],
       ),
       body: async.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
-        data: (task) {
+        data: (rawTask) {
+          final task = overlayTaskOr(widget.uid, rawTask, overlay) ?? rawTask;
           if (!_initialized) {
             _nameController.text = task.displayName;
             _noteController.text = task.note ?? '';
@@ -394,28 +463,37 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Completed'),
-                value: task.isDone,
-                onChanged: (_) => _toggleDone(task),
+                value: _completedOverride ?? task.isDone,
+                onChanged:
+                    _saving ? null : (value) => _toggleDone(task, value),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Status'),
-                subtitle: Text(TaskStatus.label(task.status)),
-                trailing: const Icon(Icons.chevron_right),
+                subtitle: Text(
+                  TaskStatus.label(
+                    (_completedOverride ?? task.isDone)
+                        ? TaskStatus.done
+                        : (_completedOverride == false
+                            ? TaskStatus.notStarted
+                            : task.status),
+                  ),
+                ),
+                trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickStatus(task),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Due'),
                 subtitle: Text(_dueSubtitle(task)),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickDue(task),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Priority'),
                 subtitle: Text(priorityLabel(task.priority)),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickPriority(task),
               ),
               ListTile(
@@ -426,7 +504,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                       ? task.projectName!
                       : 'Inbox',
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickProject(task),
               ),
               if (task.tags.isNotEmpty)
@@ -454,8 +532,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
                       s.isDone
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
+                          ? Symbols.check_box
+                          : Symbols.check_box_outline_blank,
                     ),
                     title: Text(s.displayName),
                   ),

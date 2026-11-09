@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/providers.dart';
 import '../../core/widgets/add_account_chooser.dart';
@@ -17,7 +18,7 @@ class AccountsPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Accounts')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showAddAccountChooser(context),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Symbols.add),
         label: const Text('Add account'),
       ),
       body: accounts.isEmpty
@@ -31,8 +32,8 @@ class AccountsPage extends ConsumerWidget {
                 return ListTile(
                   leading: Icon(
                     selected
-                        ? Icons.check_circle
-                        : Icons.account_circle_outlined,
+                        ? Symbols.check_circle
+                        : Symbols.account_circle,
                   ),
                   title: Text(account.label),
                   subtitle: Text('${account.email}\n${account.baseUrl}'),

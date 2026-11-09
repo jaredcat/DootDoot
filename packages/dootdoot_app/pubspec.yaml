@@ -41,6 +41,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.6.0+eol
   connectivity_plus: ^7.3.2
   flutter_slidable: ^5.2.0
+  material_symbols_icons: ^4.2960.0
 
 dev_dependencies:
   flutter_test:

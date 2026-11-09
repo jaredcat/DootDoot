@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
-import '../../core/offline/sync_status_button.dart';
+import '../../core/widgets/shell_app_bar_actions.dart';
 import '../tasks/task_providers.dart';
 
 class AreasPage extends ConsumerWidget {
@@ -15,7 +16,7 @@ class AreasPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Areas'),
-        actions: const [SyncStatusButton()],
+        actions: const [ShellAppBarActions()],
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -32,13 +33,13 @@ class AreasPage extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final area = areas[index];
                 return ListTile(
-                  leading: const Icon(Icons.layers_outlined),
+                  leading: const Icon(Symbols.layers),
                   title: Text(area.name),
                   subtitle:
                       area.description != null && area.description!.isNotEmpty
                       ? Text(area.description!)
                       : null,
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(Symbols.chevron_right),
                   onTap: () {
                     final uid = area.uid;
                     if (uid != null) {

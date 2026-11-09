@@ -748,7 +748,20 @@ class OfflineWriteCoordinator {
     final accountId = _accountId;
     final uid = task.uid;
     if (accountId == null || uid == null) return;
-    // Refresh happens via list cache putJson from providers.
+    await _patchTaskSnapshots(accountId, (tasks) {
+      var found = false;
+      final next = <TududiTask>[];
+      for (final t in tasks) {
+        if (t.uid == uid) {
+          next.add(task);
+          found = true;
+        } else {
+          next.add(t);
+        }
+      }
+      if (!found) next.insert(0, task);
+      return next;
+    });
   }
 
   Future<void> _cacheNote(TududiNote note) async {

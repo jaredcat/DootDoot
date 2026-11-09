@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
+import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
-import '../../core/offline/sync_status_button.dart';
+import '../../core/widgets/shell_app_bar_actions.dart';
 import '../../core/widgets/swipe_action_tile.dart';
 import '../tasks/task_actions.dart';
 import '../tasks/task_providers.dart';
@@ -16,20 +20,22 @@ class NotesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(notesProvider);
+    final overlay = ref.watch(editOverlayProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notes'),
-        actions: const [SyncStatusButton()],
+        actions: const [ShellAppBarActions()],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/notes/new'),
-        child: const Icon(Icons.add),
+        child: const Icon(Symbols.add),
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
-        data: (notes) {
+        data: (rawNotes) {
+          final notes = mergeNoteOverlay(rawNotes, overlay.notes);
           if (notes.isEmpty) {
             return const Center(child: Text('No notes yet'));
           }
@@ -58,7 +64,7 @@ class NotesPage extends ConsumerWidget {
                   actions: [
                     SwipeAction(
                       label: 'Delete',
-                      icon: Icons.delete_outline,
+                      icon: Symbols.delete,
                       backgroundColor: DootColors.coral,
                       foregroundColor: Colors.white,
                       onPressed: () => _deleteNote(context, ref, note),
@@ -92,6 +98,7 @@ class NotesPage extends ConsumerWidget {
             uid,
             current: note,
           );
+      ref.read(editHistoryProvider.notifier).push(NoteDeleteCommand(note));
       ref.invalidate(notesProvider);
       if (!context.mounted) return;
       final msg = offlineQueuedMessage(result);

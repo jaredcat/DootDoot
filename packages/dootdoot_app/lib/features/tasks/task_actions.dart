@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import 'task_providers.dart';
 
@@ -43,7 +46,7 @@ Future<String?> showPriorityPicker(
               ListTile(
                 title: Text(priorityLabel(priority)),
                 trailing: _priorityMatches(priority, current)
-                    ? const Icon(Icons.check)
+                    ? const Icon(Symbols.check)
                     : null,
                 onTap: () => Navigator.of(context).pop(priority),
               ),
@@ -143,19 +146,24 @@ Future<void> patchTaskFields(
   final uid = task.uid;
   if (uid == null) return;
   try {
+    final patchBody = {
+      'name': task.displayName,
+      'note': task.note,
+      'status': task.status,
+      'priority': task.priority,
+      'due_date': task.dueDate,
+      if (task.projectId != null) 'project_id': task.projectId,
+      if (task.projectUid != null) 'project_uid': task.projectUid,
+      ...body,
+    };
     final result = await ref.read(offlineWriteCoordinatorProvider).updateTask(
           uid,
-          {
-            'name': task.displayName,
-            'note': task.note,
-            'status': task.status,
-            'priority': task.priority,
-            'due_date': task.dueDate,
-            if (task.projectId != null) 'project_id': task.projectId,
-            if (task.projectUid != null) 'project_uid': task.projectUid,
-            ...body,
-          },
+          patchBody,
           current: task,
+        );
+    final after = result.value;
+    ref.read(editHistoryProvider.notifier).push(
+          TaskUpdateCommand(before: task, after: after),
         );
     invalidateAllTaskLists(ref, detailUid: uid);
     onDone?.call();
@@ -192,6 +200,7 @@ Future<void> deleteTaskWithConfirm(
           uid,
           current: task,
         );
+    ref.read(editHistoryProvider.notifier).push(TaskDeleteCommand(task));
     invalidateAllTaskLists(ref, detailUid: uid);
     onDeleted?.call();
     if (!context.mounted) return;

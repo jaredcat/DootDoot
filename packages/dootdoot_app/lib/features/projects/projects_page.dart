@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
-import '../../core/offline/sync_status_button.dart';
+import '../../core/widgets/shell_app_bar_actions.dart';
 import '../tasks/task_providers.dart';
 
 class ProjectsPage extends ConsumerWidget {
@@ -16,7 +17,7 @@ class ProjectsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Projects'),
-        actions: const [SyncStatusButton()],
+        actions: const [ShellAppBarActions()],
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -36,7 +37,7 @@ class ProjectsPage extends ConsumerWidget {
                 return ListTile(
                   title: Text(project.name),
                   subtitle: stateLabel.isNotEmpty ? Text(stateLabel) : null,
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: const Icon(Symbols.chevron_right),
                   onTap: () {
                     final uid = project.uid;
                     if (uid != null) {

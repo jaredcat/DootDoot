@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'nav_pin.dart';
 import 'offline_cache_port.dart';
@@ -45,7 +46,7 @@ class FreeProController extends ProController {
   List<Widget> buildSettingsTiles(BuildContext context, WidgetRef ref) {
     return const [
       ListTile(
-        leading: Icon(Icons.workspace_premium_outlined),
+        leading: Icon(Symbols.workspace_premium),
         title: Text('DootDoot Pro'),
         subtitle: Text(
           'Calendar, goals, habits, boards, offline sync, widgets, '
@@ -56,7 +57,7 @@ class FreeProController extends ProController {
         isThreeLine: true,
       ),
       ListTile(
-        leading: Icon(Icons.space_dashboard_outlined),
+        leading: Icon(Symbols.space_dashboard),
         title: Text('Navigation'),
         subtitle: Text('Pro enhancement'),
         trailing: ProBadge(),

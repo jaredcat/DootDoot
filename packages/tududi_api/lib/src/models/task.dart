@@ -163,7 +163,8 @@ class TududiTask extends Equatable {
   }
 
   Map<String, dynamic> toCreateJson() => {
-        'name': name,
+        // Prefer the user-visible title; tududi often keeps that in original_name.
+        'name': displayName,
         if (note != null && note!.isNotEmpty) 'note': note,
         'status': status,
         if (priority != null) 'priority': priority,
@@ -177,7 +178,8 @@ class TududiTask extends Equatable {
       };
 
   Map<String, dynamic> toPatchJson() => {
-        'name': name,
+        // Prefer the user-visible title; tududi often keeps that in original_name.
+        'name': displayName,
         if (note != null) 'note': note,
         'status': status,
         if (priority != null) 'priority': priority,

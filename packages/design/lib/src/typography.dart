@@ -10,14 +10,14 @@ abstract final class DootTypography {
         ? DootColors.darkInk.withValues(alpha: 0.7)
         : DootColors.inkMuted;
 
-    final display = GoogleFonts.fraunces(
-      color: base,
-      fontWeight: FontWeight.w600,
-      height: 1.15,
-    );
-    final body = GoogleFonts.sourceSans3(
+    // Single sans family for all roles — no serif/display mix.
+    final sans = GoogleFonts.sourceSans3(
       color: base,
       height: 1.4,
+    );
+    final display = sans.copyWith(
+      fontWeight: FontWeight.w600,
+      height: 1.15,
     );
 
     return TextTheme(
@@ -27,15 +27,15 @@ abstract final class DootTypography {
       headlineLarge: display.copyWith(fontSize: 26),
       headlineMedium: display.copyWith(fontSize: 22),
       headlineSmall: display.copyWith(fontSize: 20),
-      titleLarge: body.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
-      titleMedium: body.copyWith(fontSize: 17, fontWeight: FontWeight.w600),
-      titleSmall: body.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
-      bodyLarge: body.copyWith(fontSize: 17),
-      bodyMedium: body.copyWith(fontSize: 15),
-      bodySmall: body.copyWith(fontSize: 13, color: muted),
-      labelLarge: body.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
-      labelMedium: body.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
-      labelSmall: body.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
+      titleLarge: sans.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
+      titleMedium: sans.copyWith(fontSize: 17, fontWeight: FontWeight.w600),
+      titleSmall: sans.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
+      bodyLarge: sans.copyWith(fontSize: 17),
+      bodyMedium: sans.copyWith(fontSize: 15),
+      bodySmall: sans.copyWith(fontSize: 13, color: muted),
+      labelLarge: sans.copyWith(fontSize: 15, fontWeight: FontWeight.w600),
+      labelMedium: sans.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+      labelSmall: sans.copyWith(fontSize: 11, fontWeight: FontWeight.w600),
     );
   }
 }

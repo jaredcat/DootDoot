@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import 'home_shell.dart';
 
@@ -32,21 +33,21 @@ class MorePage extends ConsumerWidget {
         if (!hideKind(NavPinKind.projects) && !hideRoute('/more/projects'))
           _tile(
             context,
-            icon: Icons.folder_outlined,
+            icon: Symbols.folder,
             title: 'Projects',
             onTap: () => context.push('/more/projects'),
           ),
         if (!hideKind(NavPinKind.areas) && !hideRoute('/more/areas'))
           _tile(
             context,
-            icon: Icons.layers_outlined,
+            icon: Symbols.layers,
             title: 'Areas',
             onTap: () => context.push('/more/areas'),
           ),
         if (!hideKind(NavPinKind.notes) && !hideRoute('/more/notes'))
           _tile(
             context,
-            icon: Icons.notes_outlined,
+            icon: Symbols.notes,
             title: 'Notes',
             onTap: () => context.push('/more/notes'),
           ),
@@ -69,21 +70,21 @@ class MorePage extends ConsumerWidget {
         if (!hideKind(NavPinKind.search) && !hideRoute('/more/search'))
           _tile(
             context,
-            icon: Icons.search,
+            icon: Symbols.search,
             title: 'Search',
             onTap: () => context.push('/more/search'),
           ),
         if (!hideKind(NavPinKind.accounts) && !hideRoute('/more/accounts'))
           _tile(
             context,
-            icon: Icons.switch_account_outlined,
+            icon: Symbols.switch_account,
             title: 'Accounts',
             onTap: () => context.push('/more/accounts'),
           ),
         if (!hideKind(NavPinKind.settings) && !hideRoute('/more/settings'))
           _tile(
             context,
-            icon: Icons.settings_outlined,
+            icon: Symbols.settings,
             title: 'Settings',
             onTap: () => context.push('/more/settings'),
           ),
@@ -103,7 +104,7 @@ class MorePage extends ConsumerWidget {
       leading: Icon(icon),
       title: Text(title),
       subtitle: subtitle == null ? null : Text(subtitle),
-      trailing: trailing ?? const Icon(Icons.chevron_right),
+      trailing: trailing ?? const Icon(Symbols.chevron_right),
       onTap: onTap,
     );
   }

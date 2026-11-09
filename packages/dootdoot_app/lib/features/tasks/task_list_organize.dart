@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 import 'package:tududi_api/tududi_api.dart';
 
+import 'today_section_prefs.dart';
+
 /// Upcoming status filter (parity with Tududi Upcoming toolbar).
 enum UpcomingStatusFilter { active, completed, all }
 
@@ -18,6 +20,38 @@ extension UpcomingStatusFilterX on UpcomingStatusFilter {
       };
 }
 
+/// Sort field for Upcoming day groups (created_at deferred until API exposes it).
+enum UpcomingSortField { priority, dueDate, name }
+
+extension UpcomingSortFieldX on UpcomingSortField {
+  String get label => switch (this) {
+        UpcomingSortField.priority => 'Priority',
+        UpcomingSortField.dueDate => 'Due date',
+        UpcomingSortField.name => 'Name',
+      };
+}
+
+class UpcomingSort {
+  /// Default keeps day grouping ([UpcomingSortField.dueDate]).
+  const UpcomingSort({
+    this.field = UpcomingSortField.dueDate,
+    this.ascending = true,
+  });
+
+  final UpcomingSortField field;
+  final bool ascending;
+
+  /// Day columns only make sense when sorting by due date.
+  bool get groupsByDay => field == UpcomingSortField.dueDate;
+
+  UpcomingSort copyWith({UpcomingSortField? field, bool? ascending}) {
+    return UpcomingSort(
+      field: field ?? this.field,
+      ascending: ascending ?? this.ascending,
+    );
+  }
+}
+
 /// Named section on the Today list (parity with Tududi Today page).
 enum TodaySectionKind { overdue, planned, suggested, completed }
 
@@ -31,10 +65,15 @@ extension TodaySectionKindX on TodaySectionKind {
 }
 
 class TaskSection {
-  const TaskSection({required this.title, required this.tasks});
+  const TaskSection({
+    required this.title,
+    required this.tasks,
+    this.kind,
+  });
 
   final String title;
   final List<TududiTask> tasks;
+  final TodaySectionKind? kind;
 }
 
 DateTime? taskDueDay(TududiTask task) {
@@ -83,6 +122,27 @@ int compareTasksTududi(TududiTask a, TududiTask b) {
   return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
 }
 
+int compareTasksUpcoming(TududiTask a, TududiTask b, UpcomingSort sort) {
+  final int primary = switch (sort.field) {
+    UpcomingSortField.priority => priorityRank(a).compareTo(priorityRank(b)),
+    UpcomingSortField.dueDate => () {
+        final aDue = taskDueDay(a);
+        final bDue = taskDueDay(b);
+        if (aDue != null && bDue != null) return aDue.compareTo(bDue);
+        if (aDue != null) return -1;
+        if (bDue != null) return 1;
+        return 0;
+      }(),
+    UpcomingSortField.name =>
+      a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+  };
+  if (primary != 0) {
+    return sort.ascending ? primary : -primary;
+  }
+  // Stable secondary: Tududi default chain without reversing.
+  return compareTasksTududi(a, b);
+}
+
 bool _isPlannedStatus(TududiTask task) {
   return task.status == TaskStatus.inProgress ||
       task.status == TaskStatus.planned ||
@@ -90,9 +150,13 @@ bool _isPlannedStatus(TududiTask task) {
 }
 
 /// Partition Today API results into Tududi-like sections (no duplication).
+///
+/// Group-by project/area is intentionally omitted here — Tududi keeps Today as
+/// fixed sections; project/area filtering belongs on Search / Projects / Views.
 List<TaskSection> organizeTodaySections(
   List<TududiTask> tasks, {
   DateTime? now,
+  TodaySectionVisibility visibility = const TodaySectionVisibility(),
 }) {
   final today = calendarDay(now);
   final overdue = <TududiTask>[];
@@ -131,14 +195,30 @@ List<TaskSection> organizeTodaySections(
   });
 
   return [
-    if (overdue.isNotEmpty)
-      TaskSection(title: TodaySectionKind.overdue.label, tasks: overdue),
+    if (visibility.showOverdue && overdue.isNotEmpty)
+      TaskSection(
+        kind: TodaySectionKind.overdue,
+        title: TodaySectionKind.overdue.label,
+        tasks: overdue,
+      ),
     if (planned.isNotEmpty)
-      TaskSection(title: TodaySectionKind.planned.label, tasks: planned),
-    if (suggested.isNotEmpty)
-      TaskSection(title: TodaySectionKind.suggested.label, tasks: suggested),
-    if (completed.isNotEmpty)
-      TaskSection(title: TodaySectionKind.completed.label, tasks: completed),
+      TaskSection(
+        kind: TodaySectionKind.planned,
+        title: TodaySectionKind.planned.label,
+        tasks: planned,
+      ),
+    if (visibility.showSuggested && suggested.isNotEmpty)
+      TaskSection(
+        kind: TodaySectionKind.suggested,
+        title: TodaySectionKind.suggested.label,
+        tasks: suggested,
+      ),
+    if (visibility.showCompleted && completed.isNotEmpty)
+      TaskSection(
+        kind: TodaySectionKind.completed,
+        title: TodaySectionKind.completed.label,
+        tasks: completed,
+      ),
   ];
 }
 
@@ -150,13 +230,27 @@ String upcomingDayLabel(DateTime day, {DateTime? now}) {
   return DateFormat('EEEE, MMM d').format(day);
 }
 
-/// Group Upcoming tasks by due day (and optional "No due date").
+/// Organize Upcoming tasks.
+///
+/// Due-date sort keeps day groups (Tududi default). Name / priority sorts use a
+/// flat list so the order is visible across the whole week.
+///
+/// No group-by project — use Projects/Search/Views for that.
 List<TaskSection> organizeUpcomingSections(
   List<TududiTask> tasks, {
   required UpcomingStatusFilter statusFilter,
+  UpcomingSort sort = const UpcomingSort(),
   DateTime? now,
 }) {
   final filtered = tasks.where(statusFilter.matches).toList();
+
+  if (!sort.groupsByDay) {
+    final flat = List<TududiTask>.of(filtered)
+      ..sort((a, b) => compareTasksUpcoming(a, b, sort));
+    if (flat.isEmpty) return const [];
+    return [TaskSection(title: sort.field.label, tasks: flat)];
+  }
+
   final byDay = <DateTime, List<TududiTask>>{};
   final noDue = <TududiTask>[];
 
@@ -170,15 +264,18 @@ List<TaskSection> organizeUpcomingSections(
   }
 
   final days = byDay.keys.toList()..sort();
+  final orderedDays = sort.ascending ? days : days.reversed.toList();
+
   final sections = <TaskSection>[];
-  for (final day in days) {
-    final list = byDay[day]!..sort(compareTasksTududi);
+  for (final day in orderedDays) {
+    final list = byDay[day]!
+      ..sort((a, b) => compareTasksUpcoming(a, b, sort));
     sections.add(
       TaskSection(title: upcomingDayLabel(day, now: now), tasks: list),
     );
   }
   if (noDue.isNotEmpty) {
-    noDue.sort(compareTasksTududi);
+    noDue.sort((a, b) => compareTasksUpcoming(a, b, sort));
     sections.add(TaskSection(title: 'No due date', tasks: noDue));
   }
   return sections;

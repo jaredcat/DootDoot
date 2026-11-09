@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_api/pro_api.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/edit_history/edit_commands.dart';
+import '../../core/edit_history/edit_history.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_providers.dart';
@@ -83,12 +86,22 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
       final OfflineMutationResult<TududiNote> result;
       if (widget.uid == null) {
         result = await coordinator.createNote(body);
+        final created = result.value;
+        if (created.uid != null) {
+          ref.read(editHistoryProvider.notifier).push(NoteCreateCommand(created));
+        }
       } else {
+        final before = _current;
         result = await coordinator.updateNote(
           widget.uid!,
           body,
-          current: _current,
+          current: before,
         );
+        if (before != null) {
+          ref.read(editHistoryProvider.notifier).push(
+                NoteUpdateCommand(before: before, after: result.value),
+              );
+        }
       }
       ref.invalidate(notesProvider);
       if (!mounted) return;
@@ -129,7 +142,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.check),
+                : const Icon(Symbols.check),
           ),
         ],
       ),

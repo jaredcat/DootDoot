@@ -15,6 +15,7 @@ import '../../features/projects/project_detail_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/search/search_page.dart';
 import '../../features/settings/notifications_settings_page.dart';
+import '../../features/settings/today_settings_page.dart';
 import '../../features/settings/settings_page.dart';
 import '../../features/tasks/task_detail_page.dart';
 import '../notifications/notification_bootstrap.dart';
@@ -74,6 +75,10 @@ List<RouteBase> _moreChildRoutes(List<ProMoreRoute> proRoutes) => [
             path: 'notifications',
             builder: (context, state) =>
                 const NotificationsSettingsPage(),
+          ),
+          GoRoute(
+            path: 'today',
+            builder: (context, state) => const TodaySettingsPage(),
           ),
         ],
       ),

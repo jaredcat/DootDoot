@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../edit_history/edit_commands.dart';
+import '../edit_history/edit_history.dart';
 import '../offline/offline_write_coordinator.dart';
 import '../../features/tasks/task_providers.dart';
 
@@ -38,6 +40,10 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
       final result = await ref
           .read(offlineWriteCoordinatorProvider)
           .createTask({'name': name});
+      final created = result.value;
+      if (created.uid != null) {
+        ref.read(editHistoryProvider.notifier).push(TaskCreateCommand(created));
+      }
       ref.invalidate(tasksProvider(TaskListFilter.today));
       ref.invalidate(tasksProvider(TaskListFilter.inbox));
       if (!mounted) return;

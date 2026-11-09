@@ -40,6 +40,8 @@ void main() {
       expect(task.displayName, 'Walk dog');
       expect(task.tags.single.name, 'home');
       expect(task.isOpen, isTrue);
+      expect(task.toPatchJson()['name'], 'Walk dog');
+      expect(task.toCreateJson()['name'], 'Walk dog');
     });
 
     test('formats project state labels', () {

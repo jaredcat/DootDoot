@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Extra More-tab destination contributed by a Pro build.
 class ProNavDestination {
@@ -20,22 +21,22 @@ class ProNavDestination {
 abstract final class ProDestinations {
   static const all = <ProNavDestination>[
     ProNavDestination(
-      icon: Icons.calendar_month_outlined,
+      icon: Symbols.calendar_month,
       title: 'Calendar',
       route: '/more/calendar',
     ),
     ProNavDestination(
-      icon: Icons.flag_outlined,
+      icon: Symbols.flag,
       title: 'Goals',
       route: '/more/goals',
     ),
     ProNavDestination(
-      icon: Icons.loop,
+      icon: Symbols.loop,
       title: 'Habits',
       route: '/more/habits',
     ),
     ProNavDestination(
-      icon: Icons.view_kanban_outlined,
+      icon: Symbols.view_kanban,
       title: 'Boards',
       route: '/more/boards',
     ),

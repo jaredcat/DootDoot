@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
-import '../../core/offline/sync_status_button.dart';
 import '../../core/providers.dart';
-import '../../core/widgets/account_switcher_sheet.dart';
 import '../../core/widgets/quick_add_sheet.dart';
+import '../../core/widgets/shell_app_bar_actions.dart';
 import '../tasks/task_list_view.dart';
 import 'more_page.dart';
 import 'nav_slot_page.dart';
@@ -58,7 +58,6 @@ class HomeShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final account = ref.watch(activeAccountProvider);
     final pins = ref.watch(bottomNavPinsProvider);
     final useCustom = ref.watch(useCustomBottomNavProvider);
     final shellIndex = navigationShell.currentIndex;
@@ -85,27 +84,8 @@ class HomeShell extends ConsumerWidget {
                     ? 'More'
                     : (currentPin?.label ?? _legacyTitleFor(shellIndex)),
               ),
-              actions: [
-                const SyncStatusButton(),
-                if (account != null)
-                  IconButton(
-                    tooltip: account.label,
-                    onPressed: () => showAccountSwitcher(context),
-                    icon: CircleAvatar(
-                      radius: 14,
-                      child: Text(
-                        account.label.isNotEmpty
-                            ? account.label.substring(0, 1).toUpperCase()
-                            : '?',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
-                IconButton(
-                  tooltip: 'Search',
-                  onPressed: () => context.push('/more/search'),
-                  icon: const Icon(Icons.search),
-                ),
+              actions: const [
+                ShellAppBarActions(showSearch: true),
               ],
             )
           : null,
@@ -113,7 +93,7 @@ class HomeShell extends ConsumerWidget {
       floatingActionButton: showFab
           ? FloatingActionButton(
               onPressed: () => showQuickAddSheet(context),
-              child: const Icon(Icons.add),
+              child: const Icon(Symbols.add),
             )
           : null,
       bottomNavigationBar: NavigationBar(
@@ -134,30 +114,30 @@ class HomeShell extends ConsumerWidget {
             ...pins.map(
               (pin) => NavigationDestination(
                 icon: Icon(pin.icon),
-                selectedIcon: Icon(pin.selectedIcon),
+                selectedIcon: Icon(pin.selectedIcon, fill: 1),
                 label: pin.label,
               ),
             )
           else ...[
             const NavigationDestination(
-              icon: Icon(Icons.wb_sunny_outlined),
-              selectedIcon: Icon(Icons.wb_sunny),
+              icon: Icon(Symbols.wb_sunny),
+              selectedIcon: Icon(Symbols.wb_sunny, fill: 1),
               label: 'Today',
             ),
             const NavigationDestination(
-              icon: Icon(Icons.calendar_view_week_outlined),
-              selectedIcon: Icon(Icons.calendar_view_week),
+              icon: Icon(Symbols.calendar_view_week),
+              selectedIcon: Icon(Symbols.calendar_view_week, fill: 1),
               label: 'Upcoming',
             ),
             const NavigationDestination(
-              icon: Icon(Icons.inbox_outlined),
-              selectedIcon: Icon(Icons.inbox),
+              icon: Icon(Symbols.inbox),
+              selectedIcon: Icon(Symbols.inbox, fill: 1),
               label: 'Inbox',
             ),
           ],
           const NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view),
+            icon: Icon(Symbols.grid_view),
+            selectedIcon: Icon(Symbols.grid_view, fill: 1),
             label: 'More',
           ),
         ],

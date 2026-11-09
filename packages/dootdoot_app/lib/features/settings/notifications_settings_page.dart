@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pro_api/pro_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/notifications/notification_providers.dart';
 import '../../core/sync/background_sync.dart';
@@ -142,7 +143,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
             isThreeLine: true,
           ),
           ListTile(
-            leading: const Icon(Icons.sync),
+            leading: const Icon(Symbols.sync),
             title: const Text('Sync now'),
             onTap: () async {
               await BackgroundSync.run(

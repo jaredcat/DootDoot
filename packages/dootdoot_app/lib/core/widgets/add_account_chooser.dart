@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pro_api/pro_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../providers.dart';
 
@@ -46,7 +47,7 @@ class _AddAccountChooserSheet extends ConsumerWidget {
             trailing: locked ? const ProBadge() : null,
           ),
           ListTile(
-            leading: const Icon(Icons.cloud_outlined),
+            leading: const Icon(Symbols.cloud),
             title: const Text('tududi Cloud'),
             subtitle: const Text('app.tududi.com'),
             trailing: locked ? const ProBadge() : null,
@@ -56,7 +57,7 @@ class _AddAccountChooserSheet extends ConsumerWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.dns_outlined),
+            leading: const Icon(Symbols.dns),
             title: const Text('Self-hosted server'),
             subtitle: const Text('Your own tududi URL'),
             trailing: locked ? const ProBadge() : null,
