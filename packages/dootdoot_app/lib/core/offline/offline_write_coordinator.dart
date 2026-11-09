@@ -119,16 +119,48 @@ class OfflineWriteCoordinator {
         'body': body,
         if (base != null) 'base': _taskJson(base),
       });
-      final optimistic = (base ??
-              TududiTask(id: 0, name: body['name']?.toString() ?? '', uid: uid))
-          .copyWith(
-        name: body['name']?.toString(),
-        note: body['note']?.toString(),
+      final fallback = base ??
+          TududiTask(id: 0, name: body['name']?.toString() ?? '', uid: uid);
+      final optimistic = TududiTask(
+        id: fallback.id,
+        name: body['name']?.toString() ?? fallback.name,
+        uid: uid,
+        note: body.containsKey('note')
+            ? body['note']?.toString()
+            : fallback.note,
         status: body['status'] is int
             ? body['status'] as int
-            : int.tryParse(body['status']?.toString() ?? '') ?? base?.status,
-        priority: body['priority']?.toString(),
-        dueDate: body['due_date']?.toString(),
+            : int.tryParse(body['status']?.toString() ?? '') ??
+                fallback.status,
+        priority: body.containsKey('priority')
+            ? body['priority']?.toString()
+            : fallback.priority,
+        dueDate: body.containsKey('due_date')
+            ? body['due_date']?.toString()
+            : fallback.dueDate,
+        dueTime: fallback.dueTime,
+        projectId: body.containsKey('project_id')
+            ? (body['project_id'] is int
+                ? body['project_id'] as int
+                : int.tryParse(body['project_id']?.toString() ?? ''))
+            : fallback.projectId,
+        projectUid: body.containsKey('project_uid')
+            ? body['project_uid']?.toString()
+            : fallback.projectUid,
+        projectName: body.containsKey('project_name')
+            ? body['project_name']?.toString()
+            : (body.containsKey('project_id') && body['project_id'] == null
+                ? null
+                : fallback.projectName),
+        areaId: fallback.areaId,
+        areaUid: fallback.areaUid,
+        goalUid: fallback.goalUid,
+        tags: fallback.tags,
+        subtasks: fallback.subtasks,
+        completedAt: fallback.completedAt,
+        recurrenceType: fallback.recurrenceType,
+        originalName: fallback.originalName,
+        todayMoveCount: fallback.todayMoveCount,
       );
       await _patchTaskSnapshots(accountId, (tasks) {
         return [
@@ -188,6 +220,52 @@ class OfflineWriteCoordinator {
       });
       _ref.read(syncStatusProvider.notifier).refreshPending();
       return OfflineTaskMutationResult(value: optimistic, queuedOffline: true);
+    }
+  }
+
+  Future<OfflineMutationResult<void>> deleteTask(
+    String uid, {
+    TududiTask? current,
+  }) async {
+    final accountId = _accountId;
+    Future<void> removeLocal() async {
+      if (accountId == null) return;
+      await _patchTaskSnapshots(
+        accountId,
+        (tasks) => [for (final t in tasks) if (t.uid != uid) t],
+      );
+    }
+
+    // Never-synced local creates: drop from cache only.
+    if (uid.startsWith('local_')) {
+      await removeLocal();
+      return const OfflineMutationResult(value: null, queuedOffline: true);
+    }
+
+    final client = await _ref.read(tududiClientProvider.future);
+    if (client == null) {
+      throw TududiApiException(message: 'Not signed in');
+    }
+    try {
+      await client.deleteTask(uid);
+      await removeLocal();
+      return const OfflineMutationResult(value: null);
+    } on TududiApiException catch (e) {
+      if (!_offlineActive || !e.isTransportFailure) rethrow;
+      if (accountId == null) rethrow;
+      _ref.read(syncStatusProvider.notifier).markOffline();
+
+      await _cache.enqueueWrite(accountId, {
+        'entity': 'task',
+        'op': 'delete',
+        'clientId': _uuid.v4(),
+        'uid': uid,
+        'body': <String, dynamic>{},
+        if (current != null) 'base': _taskJson(current),
+      });
+      await removeLocal();
+      _ref.read(syncStatusProvider.notifier).refreshPending();
+      return const OfflineMutationResult(value: null, queuedOffline: true);
     }
   }
 
@@ -271,6 +349,51 @@ class OfflineWriteCoordinator {
       });
       _ref.read(syncStatusProvider.notifier).refreshPending();
       return OfflineNoteMutationResult(value: optimistic, queuedOffline: true);
+    }
+  }
+
+  Future<OfflineMutationResult<void>> deleteNote(
+    String uid, {
+    TududiNote? current,
+  }) async {
+    final accountId = _accountId;
+    Future<void> removeLocal() async {
+      if (accountId == null) return;
+      await _patchNotes(
+        accountId,
+        (notes) => [for (final n in notes) if (n.uid != uid) n],
+      );
+    }
+
+    if (uid.startsWith('local_')) {
+      await removeLocal();
+      return const OfflineMutationResult(value: null, queuedOffline: true);
+    }
+
+    final client = await _ref.read(tududiClientProvider.future);
+    if (client == null) {
+      throw TududiApiException(message: 'Not signed in');
+    }
+    try {
+      await client.deleteNote(uid);
+      await removeLocal();
+      return const OfflineMutationResult(value: null);
+    } on TududiApiException catch (e) {
+      if (!_offlineActive || !e.isTransportFailure) rethrow;
+      if (accountId == null) rethrow;
+      _ref.read(syncStatusProvider.notifier).markOffline();
+
+      await _cache.enqueueWrite(accountId, {
+        'entity': 'note',
+        'op': 'delete',
+        'clientId': _uuid.v4(),
+        'uid': uid,
+        'body': <String, dynamic>{},
+        if (current != null) 'base': _noteJson(current),
+      });
+      await removeLocal();
+      _ref.read(syncStatusProvider.notifier).refreshPending();
+      return const OfflineMutationResult(value: null, queuedOffline: true);
     }
   }
 
@@ -572,6 +695,12 @@ class OfflineWriteCoordinator {
             }
             await client.updateNote(uid, body);
             return null;
+          case 'delete':
+            if (uid == null || uid.startsWith('local_')) {
+              throw TududiApiException(message: 'Missing uid', statusCode: 404);
+            }
+            await client.deleteNote(uid);
+            return null;
           default:
             throw TududiApiException(message: 'Unknown op', statusCode: 404);
         }
@@ -602,6 +731,12 @@ class OfflineWriteCoordinator {
               throw TududiApiException(message: 'Missing uid', statusCode: 404);
             }
             await client.completeTask(uid, done: body['done'] != false);
+            return null;
+          case 'delete':
+            if (uid == null || uid.startsWith('local_')) {
+              throw TududiApiException(message: 'Missing uid', statusCode: 404);
+            }
+            await client.deleteTask(uid);
             return null;
           default:
             throw TududiApiException(message: 'Unknown op', statusCode: 404);

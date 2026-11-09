@@ -5,6 +5,7 @@ import 'package:tududi_api/tududi_api.dart';
 
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
+import '../tasks/task_actions.dart';
 import '../tasks/task_tile.dart';
 
 final areaDetailProvider =
@@ -98,6 +99,26 @@ class AreaDetailPage extends ConsumerWidget {
                       final taskUid = task.uid;
                       if (taskUid != null) context.push('/task/$taskUid');
                     },
+                    onDelete: () => deleteTaskWithConfirm(
+                      context,
+                      ref,
+                      task,
+                      onDeleted: () => ref.invalidate(areaDetailProvider(uid)),
+                    ),
+                    onDueToday: () => patchTaskFields(
+                      context,
+                      ref,
+                      task,
+                      body: {'due_date': todayYmd()},
+                      successMessage: 'Due today',
+                      onDone: () => ref.invalidate(areaDetailProvider(uid)),
+                    ),
+                    onPickPriority: () => pickAndSetTaskPriority(
+                      context,
+                      ref,
+                      task,
+                      onDone: () => ref.invalidate(areaDetailProvider(uid)),
+                    ),
                   ),
                 ),
               ],

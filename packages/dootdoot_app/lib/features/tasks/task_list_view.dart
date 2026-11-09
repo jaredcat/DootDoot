@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 
 import '../../core/offline/offline_write_coordinator.dart';
+import 'task_actions.dart';
 import 'task_list_organize.dart';
 import 'task_providers.dart';
 import 'task_tile.dart';
@@ -46,6 +47,16 @@ class TaskListView extends ConsumerWidget {
                 ref.invalidate(tasksProvider(filter));
               },
               onToggle: (task) => _toggle(context, ref, task),
+              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+              onDueToday: (task) => patchTaskFields(
+                context,
+                ref,
+                task,
+                body: {'due_date': todayYmd()},
+                successMessage: 'Due today',
+              ),
+              onPickPriority: (task) =>
+                  pickAndSetTaskPriority(context, ref, task),
             ),
           TaskListFilter.upcoming => _UpcomingTaskList(
               tasks: tasks,
@@ -53,6 +64,16 @@ class TaskListView extends ConsumerWidget {
                 ref.invalidate(tasksProvider(filter));
               },
               onToggle: (task) => _toggle(context, ref, task),
+              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+              onDueToday: (task) => patchTaskFields(
+                context,
+                ref,
+                task,
+                body: {'due_date': todayYmd()},
+                successMessage: 'Due today',
+              ),
+              onPickPriority: (task) =>
+                  pickAndSetTaskPriority(context, ref, task),
             ),
           _ => _FlatTaskList(
               tasks: tasks,
@@ -61,6 +82,16 @@ class TaskListView extends ConsumerWidget {
                 ref.invalidate(tasksProvider(filter));
               },
               onToggle: (task) => _toggle(context, ref, task),
+              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+              onDueToday: (task) => patchTaskFields(
+                context,
+                ref,
+                task,
+                body: {'due_date': todayYmd()},
+                successMessage: 'Due today',
+              ),
+              onPickPriority: (task) =>
+                  pickAndSetTaskPriority(context, ref, task),
             ),
         };
       },
@@ -103,12 +134,18 @@ class _FlatTaskList extends StatelessWidget {
     required this.emptyLabel,
     required this.onRefresh,
     required this.onToggle,
+    required this.onDelete,
+    required this.onDueToday,
+    required this.onPickPriority,
   });
 
   final List<TududiTask> tasks;
   final String emptyLabel;
   final Future<void> Function() onRefresh;
   final Future<void> Function(TududiTask task) onToggle;
+  final Future<void> Function(TududiTask task) onDelete;
+  final Future<void> Function(TududiTask task) onDueToday;
+  final Future<void> Function(TududiTask task) onPickPriority;
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +168,9 @@ class _FlatTaskList extends StatelessWidget {
               final uid = task.uid;
               if (uid != null) context.push('/task/$uid');
             },
+            onDelete: () => onDelete(task),
+            onDueToday: () => onDueToday(task),
+            onPickPriority: () => onPickPriority(task),
           );
         },
       ),
@@ -143,11 +183,17 @@ class _TodayTaskList extends StatelessWidget {
     required this.tasks,
     required this.onRefresh,
     required this.onToggle,
+    required this.onDelete,
+    required this.onDueToday,
+    required this.onPickPriority,
   });
 
   final List<TududiTask> tasks;
   final Future<void> Function() onRefresh;
   final Future<void> Function(TududiTask task) onToggle;
+  final Future<void> Function(TududiTask task) onDelete;
+  final Future<void> Function(TududiTask task) onDueToday;
+  final Future<void> Function(TududiTask task) onPickPriority;
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +220,9 @@ class _TodayTaskList extends StatelessWidget {
                   final uid = task.uid;
                   if (uid != null) context.push('/task/$uid');
                 },
+                onDelete: () => onDelete(task),
+                onDueToday: () => onDueToday(task),
+                onPickPriority: () => onPickPriority(task),
               ),
             ),
           ],
@@ -188,11 +237,17 @@ class _UpcomingTaskList extends ConsumerWidget {
     required this.tasks,
     required this.onRefresh,
     required this.onToggle,
+    required this.onDelete,
+    required this.onDueToday,
+    required this.onPickPriority,
   });
 
   final List<TududiTask> tasks;
   final Future<void> Function() onRefresh;
   final Future<void> Function(TududiTask task) onToggle;
+  final Future<void> Function(TududiTask task) onDelete;
+  final Future<void> Function(TududiTask task) onDueToday;
+  final Future<void> Function(TududiTask task) onPickPriority;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -253,6 +308,9 @@ class _UpcomingTaskList extends ConsumerWidget {
                               final uid = task.uid;
                               if (uid != null) context.push('/task/$uid');
                             },
+                            onDelete: () => onDelete(task),
+                            onDueToday: () => onDueToday(task),
+                            onPickPriority: () => onPickPriority(task),
                           ),
                         ),
                       ],

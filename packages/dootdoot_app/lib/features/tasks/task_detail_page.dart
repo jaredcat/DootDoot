@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 
 import '../../core/offline/offline_write_coordinator.dart';
+import 'task_actions.dart';
 import 'task_providers.dart';
 
 class TaskDetailPage extends ConsumerStatefulWidget {
@@ -38,11 +40,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   ];
 
   void _invalidateTaskLists() {
-    ref.invalidate(taskDetailProvider(widget.uid));
-    ref.invalidate(tasksProvider(TaskListFilter.today));
-    ref.invalidate(tasksProvider(TaskListFilter.upcoming));
-    ref.invalidate(tasksProvider(TaskListFilter.inbox));
-    ref.invalidate(tasksProvider(TaskListFilter.all));
+    invalidateAllTaskLists(ref, detailUid: widget.uid);
   }
 
   Future<void> _save(TududiTask task) async {
@@ -57,6 +55,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           'status': task.status,
           'priority': task.priority,
           'due_date': task.dueDate,
+          if (task.projectId != null) 'project_id': task.projectId,
+          if (task.projectUid != null) 'project_uid': task.projectUid,
         },
         current: task,
       );
@@ -90,36 +90,24 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     }
   }
 
-  Future<void> _setStatus(TududiTask task, int status) async {
-    if (status == task.status) return;
+  Future<void> _patch(
+    TududiTask task,
+    Map<String, dynamic> body, {
+    String? successMessage,
+  }) async {
     setState(() => _saving = true);
     try {
-      final result =
-          await ref.read(offlineWriteCoordinatorProvider).updateTask(
-        widget.uid,
-        {
+      await patchTaskFields(
+        context,
+        ref,
+        task,
+        body: {
           'name': _nameController.text.trim(),
           'note': _noteController.text.trim(),
-          'status': status,
-          'priority': task.priority,
-          'due_date': task.dueDate,
+          ...body,
         },
-        current: task,
+        successMessage: successMessage,
       );
-      _invalidateTaskLists();
-      if (mounted) {
-        final offlineMsg = offlineQueuedMessage(result);
-        if (offlineMsg != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(offlineMsg)),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.toString())));
-      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -155,8 +143,195 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       },
     );
     if (selected != null && mounted) {
-      await _setStatus(task, selected);
+      await _patch(task, {'status': selected});
     }
+  }
+
+  Future<void> _pickDue(TududiTask task) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Due',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.today_outlined),
+                title: const Text('Today'),
+                onTap: () => Navigator.of(context).pop('today'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.event_outlined),
+                title: const Text('Tomorrow'),
+                onTap: () => Navigator.of(context).pop('tomorrow'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: const Text('Pick date…'),
+                onTap: () => Navigator.of(context).pop('pick'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.beach_access_outlined),
+                title: const Text('Clear due'),
+                onTap: () => Navigator.of(context).pop('clear'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+
+    switch (selected) {
+      case 'today':
+        await _patch(
+          task,
+          {'due_date': todayYmd()},
+          successMessage: 'Due today',
+        );
+      case 'tomorrow':
+        await _patch(
+          task,
+          {'due_date': tomorrowYmd()},
+          successMessage: 'Due tomorrow',
+        );
+      case 'clear':
+        await _patch(
+          task,
+          {'due_date': null},
+          successMessage: 'Due date cleared',
+        );
+      case 'pick':
+        final now = DateTime.now();
+        final initial = _parseDue(task.dueDate) ?? now;
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial,
+          firstDate: DateTime(now.year - 1),
+          lastDate: DateTime(now.year + 5),
+        );
+        if (picked != null && mounted) {
+          await _patch(
+            task,
+            {'due_date': formatDateYmd(picked)},
+            successMessage: 'Due ${formatDateYmd(picked)}',
+          );
+        }
+    }
+  }
+
+  DateTime? _parseDue(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> _pickPriority(TududiTask task) async {
+    final selected = await showPriorityPicker(
+      context,
+      current: task.priority,
+    );
+    if (selected != null && mounted) {
+      await _patch(
+        task,
+        {'priority': selected},
+        successMessage: 'Priority: ${priorityLabel(selected)}',
+      );
+    }
+  }
+
+  Future<void> _pickProject(TududiTask task) async {
+    final projects = await ref.read(projectsProvider.future);
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<Object>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Project',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                title: const Text('Inbox (no project)'),
+                trailing: task.projectId == null && task.projectUid == null
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () => Navigator.of(context).pop('inbox'),
+              ),
+              for (final project in projects)
+                ListTile(
+                  title: Text(project.name),
+                  trailing: (project.uid != null &&
+                              project.uid == task.projectUid) ||
+                          project.id == task.projectId
+                      ? const Icon(Icons.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(project),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+
+    if (selected == 'inbox') {
+      await _patch(
+        task,
+        {
+          'project_id': null,
+          'project_uid': null,
+          'project_name': null,
+        },
+        successMessage: 'Moved to Inbox',
+      );
+      return;
+    }
+
+    if (selected is TududiProject) {
+      await _patch(
+        task,
+        {
+          'project_id': selected.id,
+          if (selected.uid != null) 'project_uid': selected.uid,
+          'project_name': selected.name,
+        },
+        successMessage: 'Moved to ${selected.name}',
+      );
+    }
+  }
+
+  Future<void> _delete(TududiTask task) async {
+    await deleteTaskWithConfirm(
+      context,
+      ref,
+      task,
+      onDeleted: () {
+        if (mounted) context.pop();
+      },
+    );
+  }
+
+  String _dueSubtitle(TududiTask task) {
+    if (task.dueDate == null || task.dueDate!.isEmpty) return 'None';
+    return [
+      task.dueDate,
+      if (task.dueTime != null) task.dueTime,
+    ].whereType<String>().join(' ');
   }
 
   @override
@@ -167,6 +342,20 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       appBar: AppBar(
         title: const Text('Task'),
         actions: [
+          async.maybeWhen(
+            data: (task) => PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'delete') _delete(task);
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Text('Delete'),
+                ),
+              ],
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
           async.maybeWhen(
             data: (task) => IconButton(
               onPressed: _saving ? null : () => _save(task),
@@ -215,23 +404,31 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _saving ? null : () => _pickStatus(task),
               ),
-              if (task.dueDate != null)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Due'),
-                  subtitle: Text(
-                    [
-                      task.dueDate,
-                      if (task.dueTime != null) task.dueTime,
-                    ].whereType<String>().join(' '),
-                  ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Due'),
+                subtitle: Text(_dueSubtitle(task)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _saving ? null : () => _pickDue(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Priority'),
+                subtitle: Text(priorityLabel(task.priority)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _saving ? null : () => _pickPriority(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Project'),
+                subtitle: Text(
+                  task.projectName?.isNotEmpty == true
+                      ? task.projectName!
+                      : 'Inbox',
                 ),
-              if (task.projectName != null)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Project'),
-                  subtitle: Text(task.projectName!),
-                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _saving ? null : () => _pickProject(task),
+              ),
               if (task.tags.isNotEmpty)
                 Wrap(
                   spacing: 8,
