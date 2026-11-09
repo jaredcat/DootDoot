@@ -29,7 +29,7 @@ abstract final class ProjectState {
       case '':
         return '';
       default:
-        return state!
+        return state
             .split('_')
             .where((part) => part.isNotEmpty)
             .map(

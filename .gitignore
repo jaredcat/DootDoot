@@ -33,3 +33,6 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# SonarQube scanner working directory
+.scannerwork/

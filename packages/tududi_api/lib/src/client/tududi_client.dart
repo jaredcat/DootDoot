@@ -8,11 +8,11 @@ typedef JsonMap = Map<String, dynamic>;
 /// REST client for one Tududi server (Cloud or self-hosted).
 class TududiClient {
   TududiClient({
-    required Dio dio,
+    required this.dio,
     required this.baseUrl,
-  }) : _dio = dio;
+  });
 
-  final Dio _dio;
+  final Dio dio;
   final String baseUrl;
 
   // --- Auth ---
@@ -30,7 +30,7 @@ class TududiClient {
 
   Future<void> logout() async {
     try {
-      await _dio.get<dynamic>('/api/logout');
+      await dio.get<dynamic>('/api/logout');
     } catch (_) {
       // Best-effort.
     }
@@ -87,11 +87,11 @@ class TududiClient {
     String? search,
   }) async {
     final query = <String, dynamic>{
-      if (type != null) 'type': type,
-      if (status != null) 'status': status,
-      if (projectId != null) 'project_id': projectId,
-      if (projectUid != null) 'project_uid': projectUid,
-      if (areaUid != null) 'area_uid': areaUid,
+      'type': ?type,
+      'status': ?status,
+      'project_id': ?projectId,
+      'project_uid': ?projectUid,
+      'area_uid': ?areaUid,
       if (search != null && search.isNotEmpty) 'search': search,
     };
     final data = await _get('/api/tasks', query: query);
@@ -246,7 +246,7 @@ class TududiClient {
 
   Future<dynamic> _get(String path, {Map<String, dynamic>? query}) async {
     try {
-      final response = await _dio.get<dynamic>(path, queryParameters: query);
+      final response = await dio.get<dynamic>(path, queryParameters: query);
       return _handle(response);
     } on DioException catch (e) {
       throw _fromDio(e);
@@ -255,7 +255,7 @@ class TududiClient {
 
   Future<dynamic> _post(String path, Object? body) async {
     try {
-      final response = await _dio.post<dynamic>(path, data: body);
+      final response = await dio.post<dynamic>(path, data: body);
       return _handle(response);
     } on DioException catch (e) {
       throw _fromDio(e);
@@ -264,7 +264,7 @@ class TududiClient {
 
   Future<dynamic> _patch(String path, Object? body) async {
     try {
-      final response = await _dio.patch<dynamic>(path, data: body);
+      final response = await dio.patch<dynamic>(path, data: body);
       return _handle(response);
     } on DioException catch (e) {
       throw _fromDio(e);
@@ -273,7 +273,7 @@ class TududiClient {
 
   Future<void> _delete(String path) async {
     try {
-      final response = await _dio.delete<dynamic>(path);
+      final response = await dio.delete<dynamic>(path);
       _handle(response);
     } on DioException catch (e) {
       throw _fromDio(e);
