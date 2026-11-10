@@ -25,7 +25,8 @@ packages/design/          Theme and shared UI tokens
 docs/                     Privacy policy (GitHub Pages)
 ```
 
-**Privacy policy:** https://jaredcat.github.io/dootdoot/privacy-policy/
+**Privacy policy:** https://jaredcat.github.io/dootdoot/privacy-policy/  
+**Terms of Service:** https://jaredcat.github.io/dootdoot/terms/
 
 Local layout (both checkouts side by side):
 
