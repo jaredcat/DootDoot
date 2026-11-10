@@ -12,7 +12,7 @@ This repository is the **free / community** client (open-core):
 - Tasks, projects, areas, notes, search
 - **One account**
 
-**Pro** enhancements (calendar, goals, habits, boards, offline cache, widgets, unlimited accounts, IAP) live in the private `pro/` sibling and ship only in the official App Store / Play build. They are not part of this source tree — flipping free feature flags will not unlock them.
+**Pro** enhancements (calendar, goals, habits, boards, offline cache, widgets, unlimited accounts, IAP).
 
 ## Structure
 
@@ -25,17 +25,8 @@ packages/design/          Theme and shared UI tokens
 docs/                     Privacy policy (GitHub Pages)
 ```
 
-**Privacy policy:** https://jaredcat.github.io/dootdoot/privacy-policy/  
-**Terms of Service:** https://jaredcat.github.io/dootdoot/terms/
-
-Local layout (both checkouts side by side):
-
-```text
-dootdoot/
-  free/                   # this repo (public)
-  pro/                    # private store / Pro overlay
-  dootdoot.code-workspace
-```
+**Privacy policy:** <https://jaredcat.github.io/dootdoot/privacy-policy/>
+**Terms of Service:** <https://jaredcat.github.io/dootdoot/terms/>
 
 ## Setup
 
@@ -45,8 +36,6 @@ cd apps/mobile && flutter run
 ```
 
 Requires Flutter 3.47+ / Dart 3.13+.
-
-For the official store / Pro build, use the sibling `pro/` checkout and run that app (it path-depends on these packages).
 
 ## License
 

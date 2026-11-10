@@ -22,7 +22,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('DootDoot'), findsWidgets);
-    expect(find.textContaining('unofficial', findRichText: true), findsWidgets);
+    expect(find.text('An unofficial companion for tududi'), findsOneWidget);
+    expect(find.text('Continue with tududi Cloud'), findsOneWidget);
+    expect(find.text('Use self-hosted server'), findsOneWidget);
   });
 }

@@ -198,7 +198,15 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             if (controller.canPurchase) ...[
               FilledButton(
                 onPressed: () async {
-                  await controller.purchase();
+                  try {
+                    await controller.purchase();
+                  } on ProPurchaseException catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(e.message)),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Unlock Pro'),
               ),

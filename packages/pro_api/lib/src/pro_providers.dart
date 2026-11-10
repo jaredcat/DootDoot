@@ -46,7 +46,16 @@ Future<bool> showProUnlockSheet(
     ),
   );
   if (result == true) {
-    await controller.purchase();
+    try {
+      await controller.purchase();
+    } on ProPurchaseException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+      return false;
+    }
     return true;
   }
   return false;

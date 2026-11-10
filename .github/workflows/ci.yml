@@ -19,10 +19,12 @@ jobs:
       - name: Analyze
         run: |
           dart analyze packages/tududi_api
-          dart analyze packages/design
+          # Flutter packages need the Flutter analyzer (dart:ui).
+          flutter analyze packages/design packages/dootdoot_app packages/pro_api
           cd apps/mobile && flutter analyze
       - name: Test
         run: |
           dart test packages/tududi_api
-          dart test packages/design
+          # Flutter packages must use flutter test; dart test lacks dart:ui.
+          flutter test packages/design packages/dootdoot_app
           cd apps/mobile && flutter test

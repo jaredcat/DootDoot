@@ -6,6 +6,16 @@ import 'nav_pin.dart';
 import 'offline_cache_port.dart';
 import 'pro_nav.dart';
 
+/// Thrown by store [ProController.purchase] when billing cannot start.
+class ProPurchaseException implements Exception {
+  const ProPurchaseException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 /// Open-core Pro surface. Free builds use [FreeProController]; the private
 /// store app overrides [proControllerProvider] with the IAP-backed controller.
 abstract class ProController extends Notifier<bool> {
