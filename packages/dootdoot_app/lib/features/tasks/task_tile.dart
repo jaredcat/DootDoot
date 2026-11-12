@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:tududi_api/tududi_api.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/feedback/completion_sound.dart';
 import '../../core/widgets/swipe_action_tile.dart';
 import 'task_status_display.dart';
 
@@ -37,7 +38,10 @@ class TaskTile extends StatelessWidget {
 
     final tile = ListTile(
       leading: IconButton(
-        onPressed: onToggle,
+        onPressed: () {
+          if (!task.isDone) playCompletionSound();
+          onToggle();
+        },
         icon: Icon(
           task.isDone ? Symbols.check_circle : Symbols.circle,
           fill: task.isDone ? 1 : 0,

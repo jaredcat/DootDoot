@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/feedback/completion_sound.dart';
 import '../../core/edit_history/edit_commands.dart';
 import '../../core/edit_history/edit_history.dart';
 import '../../core/edit_history/edit_overlay.dart';
@@ -89,6 +90,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   Future<void> _toggleDone(TududiTask task, bool done) async {
+    if (done) playCompletionSound();
     final before =
         task.uid == widget.uid ? task : task.copyWith(uid: widget.uid);
     final optimistic = before.copyWith(
@@ -220,6 +222,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
       },
     );
     if (selected != null && mounted) {
+      if (selected == TaskStatus.done && !task.isDone) {
+        playCompletionSound();
+      }
       await _patch(task, {'status': selected});
     }
   }
