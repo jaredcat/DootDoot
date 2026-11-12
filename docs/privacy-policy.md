@@ -28,4 +28,4 @@ DootDoot does **not** operate a backend that stores your tasks, notes, or projec
 
 ## Contact
 
-For privacy questions about DootDoot, [open an issue](https://github.com/jaredcat/dootdoot/issues).
+For privacy questions about DootDoot, [open an issue](https://github.com/jaredcat/DootDoot/issues).

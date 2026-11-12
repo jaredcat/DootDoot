@@ -47,4 +47,4 @@ We may update these Terms by posting a revised version on this page and updating
 
 ## Contact
 
-Questions about these Terms: [open an issue](https://github.com/jaredcat/dootdoot/issues).
+Questions about these Terms: [open an issue](https://github.com/jaredcat/DootDoot/issues).

@@ -32,4 +32,4 @@ DootDoot cannot delete server-side tududi data on your behalf beyond what the tu
 
 ## Contact
 
-Questions about DootDoot data deletion: [open an issue](https://github.com/jaredcat/dootdoot/issues).
+Questions about DootDoot data deletion: [open an issue](https://github.com/jaredcat/DootDoot/issues).

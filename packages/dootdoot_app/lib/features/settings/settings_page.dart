@@ -62,7 +62,7 @@ class SettingsPage extends ConsumerWidget {
             title: const Text('Privacy policy'),
             onTap: () => launchUrl(
               Uri.parse(
-                'https://github.com/jaredcat/dootdoot/blob/main/docs/privacy-policy.md',
+                'https://jaredcat.github.io/DootDoot/privacy-policy/',
               ),
               mode: LaunchMode.externalApplication,
             ),
