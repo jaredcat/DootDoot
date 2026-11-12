@@ -1,7 +1,7 @@
 import 'package:dootdoot_app/core/providers.dart';
 import 'package:dootdoot_app/features/tasks/task_list_view.dart';
 import 'package:dootdoot_app/features/tasks/task_providers.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';

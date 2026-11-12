@@ -27,5 +27,8 @@ jobs:
         run: |
           dart test packages/tududi_api
           # Flutter packages must use flutter test; dart test lacks dart:ui.
-          flutter test packages/design packages/dootdoot_app
-          cd apps/mobile && flutter test
+          # Run inside each package so its asset bundle includes material_ui's
+          # ink sparkle shader. A workspace-root flutter test does not.
+          (cd packages/design && flutter test)
+          (cd packages/dootdoot_app && flutter test)
+          (cd apps/mobile && flutter test)

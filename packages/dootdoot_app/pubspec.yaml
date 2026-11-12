@@ -42,6 +42,7 @@ dependencies:
   connectivity_plus: ^7.3.2
   flutter_slidable: ^5.2.0
   material_symbols_icons: ^4.2960.0
+  material_ui: ^1.11.0
 
 dev_dependencies:
   flutter_test:

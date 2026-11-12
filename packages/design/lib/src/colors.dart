@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Brand-blue palette — bright [brand] for marketing; calmer blues for UI chrome.
 abstract final class DootColors {

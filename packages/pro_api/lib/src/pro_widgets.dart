@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Small PRO chip used on locked destinations in the store build.
 class ProBadge extends StatelessWidget {
