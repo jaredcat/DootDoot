@@ -38,7 +38,7 @@ class FreeProController extends ProController {
   Future<void> purchase() async {}
 
   @override
-  Future<void> restore() async {}
+  Future<bool> restore() async => false;
 
   @override
   List<NavPin> bottomNavPinsFor(String accountId) => NavPin.defaults();

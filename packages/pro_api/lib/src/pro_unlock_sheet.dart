@@ -101,7 +101,7 @@ class ProUnlockSheet extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onRedeem,
-                child: const Text('Redeem code'),
+                child: const Text('Redeem promo code'),
               ),
             ] else if (isPro && canPurchase) ...[
               FilledButton(

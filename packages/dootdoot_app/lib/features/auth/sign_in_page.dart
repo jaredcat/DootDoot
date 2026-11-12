@@ -211,9 +211,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                 child: const Text('Unlock Pro'),
               ),
               TextButton(
-                onPressed: () async {
-                  await controller.restore();
-                },
+                onPressed: () => restoreProWithFeedback(context, ref),
                 child: const Text('Restore purchase'),
               ),
             ] else

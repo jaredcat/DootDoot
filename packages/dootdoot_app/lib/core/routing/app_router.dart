@@ -183,7 +183,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return NotificationBootstrap(
-            child: HomeShell(navigationShell: navigationShell),
+            child: HomeShell(
+              navigationShell: navigationShell,
+              locationPath: state.uri.path,
+            ),
           );
         },
         branches: branches,

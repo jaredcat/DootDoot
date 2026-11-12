@@ -46,14 +46,17 @@ abstract class ProController extends Notifier<bool> {
 
   Future<void> purchase();
 
-  Future<void> restore();
+  /// Restores store purchases. Returns `true` when Pro is unlocked afterward.
+  /// Throws [ProPurchaseException] when billing is unavailable.
+  Future<bool> restore();
 
   /// Pull entitlement from the store (e.g. after an out-of-app promo redeem).
   /// Free builds no-op; store builds query past purchases / restore.
   Future<void> syncPurchases() async {}
 
   /// Open the platform promo/offer code redeem flow. Free builds no-op.
-  Future<void> redeemPromoCode() async {}
+  /// Returns `false` if the store UI could not be opened.
+  Future<bool> redeemPromoCode() async => false;
 
   /// Extra Settings tiles (upsell, restore, offline, widgets, store blurb).
   List<Widget> buildSettingsTiles(BuildContext context, WidgetRef ref);

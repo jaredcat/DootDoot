@@ -52,9 +52,17 @@ final useCustomBottomNavProvider = Provider<bool>((ref) {
 });
 
 class HomeShell extends ConsumerWidget {
-  const HomeShell({super.key, required this.navigationShell});
+  const HomeShell({
+    super.key,
+    required this.navigationShell,
+    required this.locationPath,
+  });
 
   final StatefulNavigationShell navigationShell;
+
+  /// Full router path (e.g. `/more/settings`). Prefer this over
+  /// [GoRouterState.matchedLocation], which stays `/more` for shell children.
+  final String locationPath;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,8 +77,13 @@ class HomeShell extends ConsumerWidget {
     final currentPin =
         (!isMore && shellIndex < pins.length) ? pins[shellIndex] : null;
     final showFab = currentPin?.isTaskList ?? false;
-    final shellOwnsAppBar =
-        isMore || currentPin == null || currentPin.isTaskList;
+    // More root uses the shell AppBar ("More"). Pushed children (Settings,
+    // Projects, …) own their own AppBar — otherwise we nest two bars and
+    // duplicate shell actions (undo/redo, sync, account).
+    final onMoreRoot =
+        locationPath == '/more' || locationPath == '/more/';
+    final shellOwnsAppBar = (isMore && onMoreRoot) ||
+        (!isMore && (currentPin == null || currentPin.isTaskList));
 
     final selectedIndex = useCustom
         ? (isMore ? pins.length : shellIndex.clamp(0, pins.length - 1))
