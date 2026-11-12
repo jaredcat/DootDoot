@@ -49,21 +49,22 @@ Future<bool> restoreProWithFeedback(
   }
 }
 
-/// Explains the store redeem flow, then opens it.
+/// Confirms the Play redeem steps, then starts checkout (or iOS redeem sheet).
 Future<void> redeemProWithFeedback(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  final isAndroid = Theme.of(context).platform == TargetPlatform.android;
   final proceed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Redeem promo code'),
-      content: const Text(
-        'Google Play opens a blank redeem screen — that is normal. '
-        'Paste a Play promo code there.\n\n'
-        'After it succeeds, return to DootDoot and tap Restore purchase.\n\n'
-        'Promo codes are created in Play Console and often are not '
-        'available while the app is only on testing tracks.',
+      content: Text(
+        isAndroid
+            ? 'Play checkout will open next. Tap your payment method, '
+                'then Redeem, and enter your promo code.'
+            : 'The App Store redeem sheet will open so you can enter '
+                'your offer code.',
       ),
       actions: [
         TextButton(
@@ -72,7 +73,7 @@ Future<void> redeemProWithFeedback(
         ),
         FilledButton(
           onPressed: () => Navigator.pop(dialogContext, true),
-          child: const Text('Open Play'),
+          child: Text(isAndroid ? 'Continue' : 'Open'),
         ),
       ],
     ),
@@ -80,14 +81,20 @@ Future<void> redeemProWithFeedback(
   if (proceed != true || !context.mounted) return;
 
   final controller = ref.read(proControllerProvider.notifier);
-  final opened = await controller.redeemPromoCode();
-  if (!context.mounted) return;
-  if (!opened) {
+  try {
+    final opened = await controller.redeemPromoCode();
+    if (!context.mounted || opened) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Could not open the store redeem screen'),
+        content: Text('Could not start promo code redeem'),
       ),
     );
+  } on ProPurchaseException catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 }
 
