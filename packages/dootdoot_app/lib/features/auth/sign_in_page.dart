@@ -202,9 +202,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                     await controller.purchase();
                   } on ProPurchaseException catch (e) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(e.message)),
-                      );
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(e.message)));
                     }
                   }
                 },
@@ -287,7 +286,10 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       hintText: 'https://tududi.example.com',
                     ),
                     keyboardType: TextInputType.url,
-                    autofillHints: const [AutofillHints.url],
+                    // null (not `[]` / `url`): leave the AutofillGroup.
+                    // Otherwise 1Password / Keychain treat this as the first
+                    // login field and dump the email here.
+                    autofillHints: null,
                     textInputAction: TextInputAction.next,
                     autocorrect: false,
                     smartDashesType: SmartDashesType.disabled,

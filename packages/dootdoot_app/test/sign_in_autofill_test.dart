@@ -42,11 +42,11 @@ void main() {
       tester
           .state<AutofillGroupState>(find.byType(AutofillGroup))
           .autofillClients,
-      hasLength(3),
+      hasLength(2),
     );
 
     final url = fieldLabeled(tester, 'Server URL');
-    expect(url.autofillHints, [AutofillHints.url]);
+    expect(url.autofillHints, isNull);
     expect(url.keyboardType, TextInputType.url);
     expect(url.autocorrect, isFalse);
     expect(url.textInputAction, TextInputAction.next);
@@ -110,7 +110,7 @@ void main() {
       tester
           .state<AutofillGroupState>(find.byType(AutofillGroup))
           .autofillClients,
-      hasLength(2),
+      hasLength(1),
     );
   });
 }
