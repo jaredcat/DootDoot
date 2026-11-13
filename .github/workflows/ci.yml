@@ -19,10 +19,10 @@ jobs:
         run: flutter pub get
       - name: Analyze
         run: |
-          dart analyze packages/tududi_api
+          dart analyze --fatal-infos packages/tududi_api
           # Flutter packages need the Flutter analyzer (dart:ui).
-          flutter analyze packages/design packages/dootdoot_app packages/pro_api
-          cd apps/mobile && flutter analyze
+          flutter analyze --fatal-infos packages/design packages/dootdoot_app packages/pro_api
+          cd apps/mobile && flutter analyze --fatal-infos
       - name: Test
         run: |
           dart test packages/tududi_api

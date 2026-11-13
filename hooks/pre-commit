@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Local quality gate for staged Dart. Opt out: SKIP_HOOKS=1
+set -euo pipefail
+
+if [[ "${SKIP_HOOKS:-}" == "1" ]]; then
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR -- '*.dart' || true)"
+if [[ -z "$staged" ]]; then
+  exit 0
+fi
+
+if ! command -v dart >/dev/null 2>&1; then
+  echo "pre-commit: dart not on PATH" >&2
+  exit 1
+fi
+if ! command -v flutter >/dev/null 2>&1; then
+  echo "pre-commit: flutter not on PATH" >&2
+  exit 1
+fi
+
+echo "pre-commit: dart format"
+# shellcheck disable=SC2086
+dart format --set-exit-if-changed -- $staged
+
+echo "pre-commit: flutter/dart analyze --fatal-infos"
+dart analyze --fatal-infos packages/tududi_api
+flutter analyze --fatal-infos packages/design packages/dootdoot_app packages/pro_api
+(cd apps/mobile && flutter analyze --fatal-infos)

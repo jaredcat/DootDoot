@@ -31,11 +31,14 @@ docs/                     Privacy policy (GitHub Pages)
 ## Setup
 
 ```bash
+git config core.hooksPath hooks
 flutter pub get
 cd apps/mobile && flutter run
 ```
 
 Requires Flutter 3.47+ / Dart 3.13+.
+
+Local pre-commit runs `dart format` and `flutter analyze --fatal-infos` on staged Dart. Skip with `SKIP_HOOKS=1`.
 
 ## License
 
