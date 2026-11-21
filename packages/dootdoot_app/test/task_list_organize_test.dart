@@ -11,6 +11,7 @@ TududiTask task({
   String? priority,
   String? projectName,
   String? completedAt,
+  String? recurrenceType,
 }) {
   return TududiTask(
     id: id,
@@ -21,6 +22,7 @@ TududiTask task({
     priority: priority,
     projectName: projectName,
     completedAt: completedAt,
+    recurrenceType: recurrenceType,
   );
 }
 
@@ -29,49 +31,46 @@ void main() {
 
   group('organizeTodaySections', () {
     test('partitions without duplication and sorts by priority', () {
-      final sections = organizeTodaySections(
-        [
-          task(
-            id: 1,
-            name: 'Low overdue',
-            dueDate: '2026-11-01',
-            priority: 'low',
-          ),
-          task(
-            id: 2,
-            name: 'High overdue',
-            dueDate: '2026-11-02',
-            priority: 'high',
-          ),
-          task(
-            id: 3,
-            name: 'In progress',
-            status: TaskStatus.inProgress,
-            dueDate: '2026-11-01',
-          ),
-          task(id: 4, name: 'Suggestion', dueDate: '2026-11-08'),
-          task(
-            id: 5,
-            name: 'Done',
-            status: TaskStatus.done,
-            completedAt: '2026-11-08T12:00:00Z',
-          ),
-        ],
-        now: now,
-      );
+      final sections = organizeTodaySections([
+        task(
+          id: 1,
+          name: 'Low overdue',
+          dueDate: '2026-11-01',
+          priority: 'low',
+        ),
+        task(
+          id: 2,
+          name: 'High overdue',
+          dueDate: '2026-11-02',
+          priority: 'high',
+        ),
+        task(
+          id: 3,
+          name: 'In progress',
+          status: TaskStatus.inProgress,
+          dueDate: '2026-11-01',
+        ),
+        task(id: 4, name: 'Suggestion', dueDate: '2026-11-08'),
+        task(
+          id: 5,
+          name: 'Done',
+          status: TaskStatus.done,
+          completedAt: '2026-11-08T12:00:00Z',
+        ),
+      ], now: now);
 
       expect(sections.map((s) => s.title).toList(), [
         'Overdue',
+        'Due today',
         'Planned',
-        'Suggested',
         'Completed',
       ]);
       expect(sections[0].tasks.map((t) => t.name), [
         'High overdue',
         'Low overdue',
       ]);
-      expect(sections[1].tasks.single.name, 'In progress');
-      expect(sections[2].tasks.single.name, 'Suggestion');
+      expect(sections[1].tasks.single.name, 'Suggestion');
+      expect(sections[2].tasks.single.name, 'In progress');
       expect(sections[3].tasks.single.name, 'Done');
     });
 
@@ -79,12 +78,8 @@ void main() {
       final sections = organizeTodaySections(
         [
           task(id: 1, name: 'Overdue', dueDate: '2026-11-01'),
-          task(
-            id: 2,
-            name: 'In progress',
-            status: TaskStatus.inProgress,
-          ),
-          task(id: 3, name: 'Suggestion', dueDate: '2026-11-08'),
+          task(id: 2, name: 'In progress', status: TaskStatus.inProgress),
+          task(id: 3, name: 'Due today', dueDate: '2026-11-08'),
           task(id: 4, name: 'Done', status: TaskStatus.done),
         ],
         now: now,
@@ -97,6 +92,56 @@ void main() {
 
       expect(sections.map((s) => s.title).toList(), ['Planned']);
       expect(sections.single.tasks.single.name, 'In progress');
+    });
+
+    test('hides due today when Overdue/Due today toggle is off', () {
+      final sections = organizeTodaySections(
+        [
+          task(id: 1, name: 'Due today', dueDate: '2026-11-08'),
+          task(id: 2, name: 'Undated suggestion'),
+        ],
+        now: now,
+        visibility: const TodaySectionVisibility(showOverdue: false),
+      );
+
+      expect(sections.map((s) => s.title).toList(), ['Suggested']);
+      expect(sections.single.tasks.single.name, 'Undated suggestion');
+    });
+  });
+
+  group('isTodayCandidate / filterTodayCandidates', () {
+    test('keeps not-started recurring parent due today', () {
+      final dueToday = task(
+        id: 1,
+        name: 'Daily chore',
+        dueDate: '2026-11-08',
+        recurrenceType: RecurrenceType.daily,
+      );
+      expect(isTodayCandidate(dueToday, now: now), isTrue);
+      expect(
+        filterTodayCandidates([dueToday], now: now).single.name,
+        'Daily chore',
+      );
+    });
+
+    test('keeps overdue and planned; drops future and undated open', () {
+      final tasks = [
+        task(id: 1, name: 'Overdue', dueDate: '2026-11-01'),
+        task(id: 2, name: 'Planned', status: TaskStatus.planned),
+        task(id: 3, name: 'Tomorrow', dueDate: '2026-11-09'),
+        task(id: 4, name: 'Someday'),
+        task(
+          id: 5,
+          name: 'Done today',
+          status: TaskStatus.done,
+          completedAt: '2026-11-08T18:00:00',
+        ),
+      ];
+
+      final kept = filterTodayCandidates(tasks, now: now).map((t) => t.name);
+      expect(kept, containsAll(['Overdue', 'Planned', 'Done today']));
+      expect(kept, isNot(contains('Tomorrow')));
+      expect(kept, isNot(contains('Someday')));
     });
   });
 

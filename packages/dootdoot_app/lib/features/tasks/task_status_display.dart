@@ -69,7 +69,8 @@ String? recurrenceLabel(TududiTask task) {
           : 'Every $interval months on the last day';
     case RecurrenceType.monthlyWeekday:
       final week = task.recurrenceWeekOfMonth ?? 1;
-      final weekday = task.recurrenceWeekday ??
+      final weekday =
+          task.recurrenceWeekday ??
           (task.recurrenceWeekdays.isNotEmpty
               ? task.recurrenceWeekdays.first
               : 1);
@@ -82,8 +83,10 @@ String? recurrenceLabel(TududiTask task) {
       base = 'Repeats';
   }
 
-  if (task.completionBased) return '$base from completion';
-  return base;
+  final withCompletion = task.completionBased ? '$base from completion' : base;
+  final time = task.dueTime;
+  if (time != null && time.isNotEmpty) return '$withCompletion · $time';
+  return withCompletion;
 }
 
 /// Compact subtitle label for non-default workflow status (not Not started/Done).

@@ -7,10 +7,7 @@ typedef JsonMap = Map<String, dynamic>;
 
 /// REST client for one Tududi server (Cloud or self-hosted).
 class TududiClient {
-  TududiClient({
-    required this.dio,
-    required this.baseUrl,
-  });
+  TududiClient({required this.dio, required this.baseUrl});
 
   final Dio dio;
   final String baseUrl;
@@ -61,6 +58,29 @@ class TududiClient {
     if (expiresAt != null) body['expires_at'] = expiresAt;
     final data = await _post('/api/profile/api-keys', body);
     return ApiKeyCreated.fromJson(_asMap(data));
+  }
+
+  /// Lists personal API keys (metadata only; full tokens are never returned).
+  Future<List<ApiKeyInfo>> listApiKeys() async {
+    final data = await _get('/api/profile/api-keys');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => ApiKeyInfo.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    return _parseList(data, ApiKeyInfo.fromJson);
+  }
+
+  /// Soft-revokes a personal API key. Cannot be undone.
+  Future<ApiKeyInfo> revokeApiKey(int id) async {
+    final data = await _post('/api/profile/api-keys/$id/revoke', const {});
+    return ApiKeyInfo.fromJson(_asMap(data));
+  }
+
+  /// Permanently deletes a personal API key.
+  Future<void> deleteApiKey(int id) async {
+    await _delete('/api/profile/api-keys/$id');
   }
 
   Future<Map<String, dynamic>> probeServer() async {
@@ -213,12 +233,18 @@ class TududiClient {
   Future<List<Map<String, dynamic>>> listInbox() async {
     final data = await _get('/api/inbox');
     if (data is List) {
-      return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     final map = _asMap(data);
     final items = map['items'] ?? map['inbox'] ?? map['data'];
     if (items is List) {
-      return items.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return items
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     return const [];
   }
@@ -285,8 +311,8 @@ class TududiClient {
     if (code >= 200 && code < 300) {
       return response.data;
     }
-    final message = _extractError(response.data) ??
-        'Request failed with status $code';
+    final message =
+        _extractError(response.data) ?? 'Request failed with status $code';
     throw TududiApiException(
       message: message,
       statusCode: code,
@@ -296,9 +322,8 @@ class TududiClient {
 
   TududiApiException _fromDio(DioException e) {
     final code = e.response?.statusCode;
-    final message = _extractError(e.response?.data) ??
-        e.message ??
-        'Network error';
+    final message =
+        _extractError(e.response?.data) ?? e.message ?? 'Network error';
     return TududiApiException(
       message: message,
       statusCode: code,
@@ -308,7 +333,12 @@ class TududiClient {
 
   String? _extractError(Object? data) {
     if (data is Map) {
-      return (data['error'] ?? data['message'] ?? data['msg'])?.toString();
+      // Prefer `message` — tududi often puts a short code in `error`.
+      final message = data['message']?.toString();
+      if (message != null && message.isNotEmpty) return message;
+      final error = data['error']?.toString();
+      if (error != null && error.isNotEmpty) return error;
+      return data['msg']?.toString();
     }
     if (data is String && data.isNotEmpty) return data;
     return null;
@@ -327,22 +357,22 @@ class TududiClient {
     return map;
   }
 
-  List<T> _parseList<T>(
-    Object? data,
-    T Function(JsonMap) fromJson,
-  ) {
+  List<T> _parseList<T>(Object? data, T Function(JsonMap) fromJson) {
     List<dynamic> list;
     if (data is List) {
       list = data;
     } else if (data is Map) {
       final map = Map<String, dynamic>.from(data);
-      final nested = map['tasks'] ??
+      final nested =
+          map['tasks'] ??
           map['projects'] ??
           map['areas'] ??
           map['notes'] ??
           map['tags'] ??
           map['goals'] ??
           map['habits'] ??
+          map['apiKeys'] ??
+          map['api_keys'] ??
           map['data'] ??
           map['items'];
       list = nested is List ? nested : const [];

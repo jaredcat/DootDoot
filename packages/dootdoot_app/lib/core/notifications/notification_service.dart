@@ -154,6 +154,11 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin
           >();
       final granted = await android?.requestNotificationsPermission();
+      try {
+        await android?.requestExactAlarmsPermission();
+      } catch (_) {
+        // Older Android / missing permission — fall back to inexact later.
+      }
       return granted ?? false;
     }
     if (Platform.isIOS || Platform.isMacOS) {
@@ -169,6 +174,25 @@ class NotificationService {
       return granted ?? false;
     }
     return false;
+  }
+
+  Future<AndroidScheduleMode> _androidScheduleMode() async {
+    if (kIsWeb || !Platform.isAndroid) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    try {
+      final canExact = await android?.canScheduleExactNotifications();
+      if (canExact == false) {
+        return AndroidScheduleMode.inexactAllowWhileIdle;
+      }
+    } catch (_) {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+    return AndroidScheduleMode.exactAllowWhileIdle;
   }
 
   Future<void> openSystemNotificationSettings() => openAppSettings();
@@ -214,6 +238,7 @@ class NotificationService {
     }
 
     upcoming.sort((a, b) => a.when.compareTo(b.when));
+    final scheduleMode = await _androidScheduleMode();
     for (final entry in upcoming.take(_maxTaskNotifications)) {
       final uid = entry.task.uid ?? entry.task.id.toString();
       await _plugin.zonedSchedule(
@@ -222,7 +247,7 @@ class NotificationService {
         title: 'Task due',
         body: entry.task.displayName,
         payload: 'task:$uid',
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         notificationDetails: _details(
           channelId: DootNotificationChannels.taskDue,
           channelName: DootNotificationChannels.taskDueName,
@@ -268,7 +293,7 @@ class NotificationService {
       title: 'Today in DootDoot',
       body: body,
       payload: 'digest',
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: await _androidScheduleMode(),
       matchDateTimeComponents: DateTimeComponents.time,
       notificationDetails: _details(
         channelId: DootNotificationChannels.dailyDigest,
@@ -302,7 +327,7 @@ class NotificationService {
       title: 'Habits waiting',
       body: '$names$more',
       payload: 'habits',
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: await _androidScheduleMode(),
       matchDateTimeComponents: DateTimeComponents.time,
       notificationDetails: _details(
         channelId: DootNotificationChannels.habits,
@@ -334,6 +359,7 @@ class NotificationService {
     }
 
     upcoming.sort((a, b) => a.when.compareTo(b.when));
+    final scheduleMode = await _androidScheduleMode();
     for (final entry in upcoming.take(20)) {
       final uid = entry.goal.uid ?? entry.goal.id.toString();
       await _plugin.zonedSchedule(
@@ -342,7 +368,7 @@ class NotificationService {
         title: 'Goal deadline',
         body: entry.goal.title,
         payload: 'goal:$uid',
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         notificationDetails: _details(
           channelId: DootNotificationChannels.goals,
           channelName: DootNotificationChannels.goalsName,

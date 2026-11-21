@@ -23,8 +23,10 @@ class TodaySettingsPage extends ConsumerWidget {
           ),
           SwitchListTile(
             secondary: const Icon(Symbols.warning_amber),
-            title: const Text('Overdue'),
-            subtitle: const Text('Past-due tasks that need attention'),
+            title: const Text('Overdue / Due today'),
+            subtitle: const Text(
+              'Past-due and due-today tasks that need attention',
+            ),
             value: visibility.showOverdue,
             onChanged: (v) => ref
                 .read(todaySectionVisibilityProvider.notifier)

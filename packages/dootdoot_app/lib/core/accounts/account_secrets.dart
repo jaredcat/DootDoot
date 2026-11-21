@@ -27,6 +27,16 @@ class AccountSecrets {
     return _storage.read(key: _cookieKey(accountId));
   }
 
+  /// Per-install id shared across accounts (survives account remove).
+  Future<void> saveDeviceInstallId(String id) {
+    return _storage.write(key: _deviceInstallIdKey, value: id);
+  }
+
+  Future<String?> readDeviceInstallId() {
+    return _storage.read(key: _deviceInstallIdKey);
+  }
+
   String _tokenKey(String id) => 'account/$id/bearer';
   String _cookieKey(String id) => 'account/$id/cookies';
+  static const _deviceInstallIdKey = 'dootdoot.deviceInstallId';
 }

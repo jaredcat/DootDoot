@@ -15,6 +15,8 @@ class RecurrenceDraft {
     this.weekday = 1,
     this.endDate,
     this.completionBased = false,
+    this.dueDate,
+    this.dueTime,
   });
 
   factory RecurrenceDraft.fromTask(TududiTask task) {
@@ -24,18 +26,21 @@ class RecurrenceDraft {
     final weekdays = task.recurrenceWeekdays.isNotEmpty
         ? List<int>.from(task.recurrenceWeekdays)
         : (task.recurrenceWeekday != null
-            ? [task.recurrenceWeekday!]
-            : <int>[]);
+              ? [task.recurrenceWeekday!]
+              : <int>[]);
     return RecurrenceDraft(
       type: type,
       interval: task.recurrenceInterval ?? 1,
       weekdays: weekdays,
       monthDay: _defaultMonthDay(task),
       weekOfMonth: task.recurrenceWeekOfMonth ?? 1,
-      weekday: task.recurrenceWeekday ??
+      weekday:
+          task.recurrenceWeekday ??
           (weekdays.isNotEmpty ? weekdays.first : DateTime.now().weekday % 7),
       endDate: task.recurrenceEndDate,
       completionBased: task.completionBased,
+      dueDate: task.dueDate,
+      dueTime: task.dueTime,
     );
   }
 
@@ -50,6 +55,12 @@ class RecurrenceDraft {
   final String? endDate;
   final bool completionBased;
 
+  /// Existing due date (used when setting time without a date).
+  final String? dueDate;
+
+  /// Time of day for each occurrence (`HH:mm`), stored as task `due_time`.
+  final String? dueTime;
+
   bool get isActive => RecurrenceType.isActive(type);
 
   RecurrenceDraft copyWith({
@@ -61,7 +72,10 @@ class RecurrenceDraft {
     int? weekday,
     String? endDate,
     bool? completionBased,
+    String? dueDate,
+    String? dueTime,
     bool clearEndDate = false,
+    bool clearDueTime = false,
   }) {
     return RecurrenceDraft(
       type: type ?? this.type,
@@ -72,6 +86,8 @@ class RecurrenceDraft {
       weekday: weekday ?? this.weekday,
       endDate: clearEndDate ? null : (endDate ?? this.endDate),
       completionBased: completionBased ?? this.completionBased,
+      dueDate: dueDate ?? this.dueDate,
+      dueTime: clearDueTime ? null : (dueTime ?? this.dueTime),
     );
   }
 
@@ -94,9 +110,16 @@ class RecurrenceDraft {
       'recurrence_type': type,
       'recurrence_interval': interval < 1 ? 1 : interval,
       'completion_based': completionBased,
-      'recurrence_end_date':
-          endDate != null && endDate!.isNotEmpty ? endDate : null,
+      'recurrence_end_date': endDate != null && endDate!.isNotEmpty
+          ? endDate
+          : null,
+      'due_time': dueTime != null && dueTime!.isNotEmpty ? dueTime : null,
     };
+    if (dueTime != null &&
+        dueTime!.isNotEmpty &&
+        (dueDate == null || dueDate!.isEmpty)) {
+      body['due_date'] = todayYmd();
+    }
 
     switch (type) {
       case RecurrenceType.weekly:
@@ -108,8 +131,9 @@ class RecurrenceDraft {
       case RecurrenceType.monthly:
         // Completion-based: omit fixed day so tududi keeps the finish day.
         // Otherwise always send a concrete day (1–31).
-        body['recurrence_month_day'] =
-            completionBased ? null : monthDay.clamp(1, 31);
+        body['recurrence_month_day'] = completionBased
+            ? null
+            : monthDay.clamp(1, 31);
         body['recurrence_weekday'] = null;
         body['recurrence_weekdays'] = null;
         body['recurrence_week_of_month'] = null;
@@ -137,12 +161,14 @@ class RecurrenceDraft {
     final task = TududiTask(
       id: 0,
       name: '',
+      dueTime: dueTime,
       recurrenceType: isActive ? type : null,
       recurrenceInterval: interval,
       recurrenceWeekday: weekday,
       recurrenceWeekdays: weekdays,
-      recurrenceMonthDay:
-          type == RecurrenceType.monthly && completionBased ? null : monthDay,
+      recurrenceMonthDay: type == RecurrenceType.monthly && completionBased
+          ? null
+          : monthDay,
       recurrenceWeekOfMonth: weekOfMonth,
       recurrenceEndDate: endDate,
       completionBased: completionBased,
@@ -170,9 +196,7 @@ Future<RecurrenceDraft?> showRecurrencePicker(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (context) {
-      return _RecurrencePickerSheet(
-        initial: RecurrenceDraft.fromTask(task),
-      );
+      return _RecurrencePickerSheet(initial: RecurrenceDraft.fromTask(task));
     },
   );
 }
@@ -225,16 +249,13 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Repeat',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Repeat', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
                 _draft.previewLabel,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 12),
               RadioGroup<String>(
@@ -258,6 +279,44 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                 const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
+                  title: const Text('Time'),
+                  subtitle: Text(
+                    _draft.dueTime != null && _draft.dueTime!.isNotEmpty
+                        ? _draft.dueTime!
+                        : 'None — reminders default to 9:00',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_draft.dueTime != null && _draft.dueTime!.isNotEmpty)
+                        IconButton(
+                          tooltip: 'Clear time',
+                          onPressed: () => setState(
+                            () => _draft = _draft.copyWith(clearDueTime: true),
+                          ),
+                          icon: const Icon(Symbols.close),
+                        ),
+                      const Icon(Symbols.chevron_right),
+                    ],
+                  ),
+                  onTap: () async {
+                    final initial =
+                        _parseDueTime(_draft.dueTime) ??
+                        const TimeOfDay(hour: 9, minute: 0);
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: initial,
+                    );
+                    if (picked == null) return;
+                    setState(
+                      () => _draft = _draft.copyWith(
+                        dueTime: formatTimeHm(picked),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: const Text('Every'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -266,10 +325,10 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                         onPressed: _draft.interval <= 1
                             ? null
                             : () => setState(
-                                  () => _draft = _draft.copyWith(
-                                    interval: _draft.interval - 1,
-                                  ),
+                                () => _draft = _draft.copyWith(
+                                  interval: _draft.interval - 1,
                                 ),
+                              ),
                         icon: const Icon(Symbols.remove),
                       ),
                       Text(
@@ -332,9 +391,7 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                       ],
                       onChanged: (d) {
                         if (d == null) return;
-                        setState(
-                          () => _draft = _draft.copyWith(monthDay: d),
-                        );
+                        setState(() => _draft = _draft.copyWith(monthDay: d));
                       },
                     ),
                   ),
@@ -373,9 +430,7 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                       ],
                       onChanged: (v) {
                         if (v == null) return;
-                        setState(
-                          () => _draft = _draft.copyWith(weekday: v),
-                        );
+                        setState(() => _draft = _draft.copyWith(weekday: v));
                       },
                     ),
                   ),
@@ -386,8 +441,8 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                   subtitle: Text(
                     _draft.completionBased
                         ? (_draft.type == RecurrenceType.monthly
-                            ? 'Next due is one month after the day you finish'
-                            : 'Count from the day you finish, then apply the pattern')
+                              ? 'Next due is one month after the day you finish'
+                              : 'Count from the day you finish, then apply the pattern')
                         : 'Count from the current due date, even if you finish late',
                   ),
                   value: _draft.completionBased,
@@ -419,7 +474,8 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
                   ),
                   onTap: () async {
                     final now = DateTime.now();
-                    final initial = DateTime.tryParse(_draft.endDate ?? '') ??
+                    final initial =
+                        DateTime.tryParse(_draft.endDate ?? '') ??
                         now.add(const Duration(days: 30));
                     final picked = await showDatePicker(
                       context: context,
@@ -459,10 +515,18 @@ class _RecurrencePickerSheetState extends State<_RecurrencePickerSheet> {
       RecurrenceType.weekly => plural ? ' week' : ' weeks',
       RecurrenceType.monthly ||
       RecurrenceType.monthlyWeekday ||
-      RecurrenceType.monthlyLastDay =>
-        plural ? ' month' : ' months',
+      RecurrenceType.monthlyLastDay => plural ? ' month' : ' months',
       _ => '',
     };
   }
 
+  TimeOfDay? _parseDueTime(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.isEmpty) return null;
+    final hour = int.tryParse(parts[0]);
+    if (hour == null) return null;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
+  }
 }

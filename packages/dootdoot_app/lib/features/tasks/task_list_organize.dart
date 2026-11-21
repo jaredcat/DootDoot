@@ -8,16 +8,16 @@ enum UpcomingStatusFilter { active, completed, all }
 
 extension UpcomingStatusFilterX on UpcomingStatusFilter {
   String get label => switch (this) {
-        UpcomingStatusFilter.active => 'Active',
-        UpcomingStatusFilter.completed => 'Completed',
-        UpcomingStatusFilter.all => 'All',
-      };
+    UpcomingStatusFilter.active => 'Active',
+    UpcomingStatusFilter.completed => 'Completed',
+    UpcomingStatusFilter.all => 'All',
+  };
 
   bool matches(TududiTask task) => switch (this) {
-        UpcomingStatusFilter.active => task.isOpen,
-        UpcomingStatusFilter.completed => task.isDone,
-        UpcomingStatusFilter.all => true,
-      };
+    UpcomingStatusFilter.active => task.isOpen,
+    UpcomingStatusFilter.completed => task.isDone,
+    UpcomingStatusFilter.all => true,
+  };
 }
 
 /// Sort field for Upcoming day groups (created_at deferred until API exposes it).
@@ -25,10 +25,10 @@ enum UpcomingSortField { priority, dueDate, name }
 
 extension UpcomingSortFieldX on UpcomingSortField {
   String get label => switch (this) {
-        UpcomingSortField.priority => 'Priority',
-        UpcomingSortField.dueDate => 'Due date',
-        UpcomingSortField.name => 'Name',
-      };
+    UpcomingSortField.priority => 'Priority',
+    UpcomingSortField.dueDate => 'Due date',
+    UpcomingSortField.name => 'Name',
+  };
 }
 
 class UpcomingSort {
@@ -53,23 +53,20 @@ class UpcomingSort {
 }
 
 /// Named section on the Today list (parity with Tududi Today page).
-enum TodaySectionKind { overdue, planned, suggested, completed }
+enum TodaySectionKind { overdue, dueToday, planned, suggested, completed }
 
 extension TodaySectionKindX on TodaySectionKind {
   String get label => switch (this) {
-        TodaySectionKind.overdue => 'Overdue',
-        TodaySectionKind.planned => 'Planned',
-        TodaySectionKind.suggested => 'Suggested',
-        TodaySectionKind.completed => 'Completed',
-      };
+    TodaySectionKind.overdue => 'Overdue',
+    TodaySectionKind.dueToday => 'Due today',
+    TodaySectionKind.planned => 'Planned',
+    TodaySectionKind.suggested => 'Suggested',
+    TodaySectionKind.completed => 'Completed',
+  };
 }
 
 class TaskSection {
-  const TaskSection({
-    required this.title,
-    required this.tasks,
-    this.kind,
-  });
+  const TaskSection({required this.title, required this.tasks, this.kind});
 
   final String title;
   final List<TududiTask> tasks;
@@ -126,15 +123,16 @@ int compareTasksUpcoming(TududiTask a, TududiTask b, UpcomingSort sort) {
   final int primary = switch (sort.field) {
     UpcomingSortField.priority => priorityRank(a).compareTo(priorityRank(b)),
     UpcomingSortField.dueDate => () {
-        final aDue = taskDueDay(a);
-        final bDue = taskDueDay(b);
-        if (aDue != null && bDue != null) return aDue.compareTo(bDue);
-        if (aDue != null) return -1;
-        if (bDue != null) return 1;
-        return 0;
-      }(),
-    UpcomingSortField.name =>
-      a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+      final aDue = taskDueDay(a);
+      final bDue = taskDueDay(b);
+      if (aDue != null && bDue != null) return aDue.compareTo(bDue);
+      if (aDue != null) return -1;
+      if (bDue != null) return 1;
+      return 0;
+    }(),
+    UpcomingSortField.name => a.displayName.toLowerCase().compareTo(
+      b.displayName.toLowerCase(),
+    ),
   };
   if (primary != 0) {
     return sort.ascending ? primary : -primary;
@@ -149,7 +147,46 @@ bool _isPlannedStatus(TududiTask task) {
       task.status == TaskStatus.waiting;
 }
 
-/// Partition Today API results into Tududi-like sections (no duplication).
+DateTime? _completedDay(TududiTask task) {
+  final raw = task.completedAt;
+  if (raw == null || raw.isEmpty) return null;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return null;
+  final local = parsed.toLocal();
+  return DateTime(local.year, local.month, local.day);
+}
+
+/// Whether [task] belongs on Today (metrics-query parity, not server `type=today`).
+///
+/// Server `type=today` omits not-started parents that are due today/overdue;
+/// Tududi web uses separate due-today/overdue fetches instead.
+bool isTodayCandidate(TududiTask task, {DateTime? now}) {
+  final today = calendarDay(now);
+  if (task.isDone ||
+      task.status == TaskStatus.archived ||
+      task.status == TaskStatus.cancelled) {
+    final completed = _completedDay(task);
+    return completed != null && completed == today;
+  }
+  if (_isPlannedStatus(task)) return true;
+  final due = taskDueDay(task);
+  return due != null && !due.isAfter(today);
+}
+
+/// Filters and dedupes tasks for the Today screen.
+List<TududiTask> filterTodayCandidates(
+  Iterable<TududiTask> tasks, {
+  DateTime? now,
+}) {
+  final deduped = <String, TududiTask>{};
+  for (final task in tasks) {
+    if (!isTodayCandidate(task, now: now)) continue;
+    deduped[task.uid ?? '${task.id}'] = task;
+  }
+  return deduped.values.toList();
+}
+
+/// Partition Today candidates into Tududi-like sections (no duplication).
 ///
 /// Group-by project/area is intentionally omitted here — Tududi keeps Today as
 /// fixed sections; project/area filtering belongs on Search / Projects / Views.
@@ -160,6 +197,7 @@ List<TaskSection> organizeTodaySections(
 }) {
   final today = calendarDay(now);
   final overdue = <TududiTask>[];
+  final dueToday = <TududiTask>[];
   final planned = <TududiTask>[];
   final suggested = <TududiTask>[];
   final completed = <TududiTask>[];
@@ -180,10 +218,15 @@ List<TaskSection> organizeTodaySections(
       overdue.add(task);
       continue;
     }
+    if (due != null && due == today) {
+      dueToday.add(task);
+      continue;
+    }
     suggested.add(task);
   }
 
   overdue.sort(compareTasksTududi);
+  dueToday.sort(compareTasksTududi);
   planned.sort(compareTasksTududi);
   suggested.sort(compareTasksTududi);
   completed.sort((a, b) {
@@ -200,6 +243,12 @@ List<TaskSection> organizeTodaySections(
         kind: TodaySectionKind.overdue,
         title: TodaySectionKind.overdue.label,
         tasks: overdue,
+      ),
+    if (visibility.showOverdue && dueToday.isNotEmpty)
+      TaskSection(
+        kind: TodaySectionKind.dueToday,
+        title: TodaySectionKind.dueToday.label,
+        tasks: dueToday,
       ),
     if (planned.isNotEmpty)
       TaskSection(
@@ -268,10 +317,12 @@ List<TaskSection> organizeUpcomingSections(
 
   final sections = <TaskSection>[];
   for (final day in orderedDays) {
-    final list = byDay[day]!
-      ..sort((a, b) => compareTasksUpcoming(a, b, sort));
+    final list = byDay[day]!..sort((a, b) => compareTasksUpcoming(a, b, sort));
     sections.add(
-      TaskSection(title: upcomingDayLabel(day, now: now), tasks: list),
+      TaskSection(
+        title: upcomingDayLabel(day, now: now),
+        tasks: list,
+      ),
     );
   }
   if (noDue.isNotEmpty) {

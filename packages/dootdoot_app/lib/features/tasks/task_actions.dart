@@ -45,10 +45,7 @@ bool _priorityMatches(String choice, String? current) {
 }
 
 /// Floating dialog to choose Low / Medium / High. Returns null if dismissed.
-Future<String?> showPriorityPicker(
-  BuildContext context, {
-  String? current,
-}) {
+Future<String?> showPriorityPicker(BuildContext context, {String? current}) {
   return showDialog<String>(
     context: context,
     builder: (context) {
@@ -85,10 +82,7 @@ Future<void> pickAndSetTaskPriority(
   TududiTask task, {
   VoidCallback? onDone,
 }) async {
-  final selected = await showPriorityPicker(
-    context,
-    current: task.priority,
-  );
+  final selected = await showPriorityPicker(context, current: task.priority);
   if (selected == null || !context.mounted) return;
   await patchTaskFields(
     context,
@@ -98,6 +92,12 @@ Future<void> pickAndSetTaskPriority(
     successMessage: 'Priority: ${priorityLabel(selected)}',
     onDone: onDone,
   );
+}
+
+String formatTimeHm(TimeOfDay time) {
+  final h = time.hour.toString().padLeft(2, '0');
+  final m = time.minute.toString().padLeft(2, '0');
+  return '$h:$m';
 }
 
 String formatDateYmd(DateTime date) {
@@ -172,15 +172,13 @@ Future<void> patchTaskFields(
       if (task.projectUid != null) 'project_uid': task.projectUid,
       ...body,
     };
-    final result = await ref.read(offlineWriteCoordinatorProvider).updateTask(
-          uid,
-          patchBody,
-          current: task,
-        );
+    final result = await ref
+        .read(offlineWriteCoordinatorProvider)
+        .updateTask(uid, patchBody, current: task);
     final after = result.value;
-    ref.read(editHistoryProvider.notifier).push(
-          TaskUpdateCommand(before: task, after: after),
-        );
+    ref
+        .read(editHistoryProvider.notifier)
+        .push(TaskUpdateCommand(before: task, after: after));
     invalidateAllTaskLists(ref, detailUid: uid);
     onDone?.call();
     if (!context.mounted) return;
@@ -212,18 +210,16 @@ Future<void> deleteTaskWithConfirm(
   );
   if (!ok || !context.mounted) return;
   try {
-    final result = await ref.read(offlineWriteCoordinatorProvider).deleteTask(
-          uid,
-          current: task,
-        );
+    final result = await ref
+        .read(offlineWriteCoordinatorProvider)
+        .deleteTask(uid, current: task);
     ref.read(editHistoryProvider.notifier).push(TaskDeleteCommand(task));
     invalidateAllTaskLists(ref, detailUid: uid);
     onDeleted?.call();
     if (!context.mounted) return;
     final msg = offlineQueuedMessage(result);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg ?? 'Deleted')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg ?? 'Deleted')));
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context)

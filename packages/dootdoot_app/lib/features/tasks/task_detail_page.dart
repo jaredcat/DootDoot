@@ -28,6 +28,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   final _noteController = TextEditingController();
   bool _initialized = false;
   bool _saving = false;
+
   /// Local switch value so the Completed toggle flips before the network returns.
   bool? _completedOverride;
 
@@ -55,8 +56,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   Future<void> _save(TududiTask task) async {
     setState(() => _saving = true);
     try {
-      final result =
-          await ref.read(offlineWriteCoordinatorProvider).updateTask(
+      final result = await ref.read(offlineWriteCoordinatorProvider).updateTask(
         widget.uid,
         {
           'name': _nameController.text.trim(),
@@ -69,15 +69,14 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         },
         current: task,
       );
-      ref.read(editHistoryProvider.notifier).push(
-            TaskUpdateCommand(before: task, after: result.value),
-          );
+      ref
+          .read(editHistoryProvider.notifier)
+          .push(TaskUpdateCommand(before: task, after: result.value));
       _invalidateTaskLists();
       if (mounted) {
         final offlineMsg = offlineQueuedMessage(result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(offlineMsg ?? 'Saved')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(offlineMsg ?? 'Saved')));
       }
     } catch (e) {
       if (mounted) {
@@ -91,8 +90,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
   Future<void> _toggleDone(TududiTask task, bool done) async {
     if (done) playCompletionSound();
-    final before =
-        task.uid == widget.uid ? task : task.copyWith(uid: widget.uid);
+    final before = task.uid == widget.uid
+        ? task
+        : task.copyWith(uid: widget.uid);
     final optimistic = before.copyWith(
       status: done ? TaskStatus.done : TaskStatus.notStarted,
     );
@@ -101,12 +101,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     ref.read(editOverlayProvider.notifier).setTask(widget.uid, optimistic);
 
     try {
-      final result =
-          await ref.read(offlineWriteCoordinatorProvider).completeTask(
-                widget.uid,
-                done: done,
-                current: before,
-              );
+      final result = await ref
+          .read(offlineWriteCoordinatorProvider)
+          .completeTask(widget.uid, done: done, current: before);
       var after = result.value.uid == widget.uid
           ? result.value
           : result.value.copyWith(uid: widget.uid);
@@ -123,9 +120,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
             result: result,
           );
         }
-        ref.read(editHistoryProvider.notifier).push(
-              TaskUpdateCommand(before: before, after: after),
-            );
+        ref
+            .read(editHistoryProvider.notifier)
+            .push(TaskUpdateCommand(before: before, after: after));
         return;
       }
 
@@ -134,9 +131,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           status: done ? TaskStatus.done : TaskStatus.notStarted,
         );
       }
-      ref.read(editHistoryProvider.notifier).push(
-            TaskUpdateCommand(before: before, after: after),
-          );
+      ref
+          .read(editHistoryProvider.notifier)
+          .push(TaskUpdateCommand(before: before, after: after));
       if (mounted) {
         setState(() => _completedOverride = after.isDone);
         showTaskCompleteSnackBar(
@@ -185,11 +182,13 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final draft = await showRecurrencePicker(context, task: task);
     if (draft == null || !mounted) return;
     final label = draft.previewLabel;
-    await _patch(
-      task,
-      draft.toPatchBody(),
-      successMessage: draft.isActive ? 'Repeats: $label' : 'Does not repeat',
-    );
+    final time = draft.dueTime;
+    final success = !draft.isActive
+        ? 'Does not repeat'
+        : (time != null && time.isNotEmpty)
+        ? 'Repeats: $label · $time'
+        : 'Repeats: $label';
+    await _patch(task, draft.toPatchBody(), successMessage: success);
   }
 
   Future<void> _pickStatus(TududiTask task) async {
@@ -261,6 +260,17 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 onTap: () => Navigator.of(context).pop('pick'),
               ),
               ListTile(
+                leading: const Icon(Symbols.schedule),
+                title: const Text('Set time…'),
+                onTap: () => Navigator.of(context).pop('time'),
+              ),
+              if (task.dueTime != null && task.dueTime!.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Symbols.timer_off),
+                  title: const Text('Clear time'),
+                  onTap: () => Navigator.of(context).pop('clear_time'),
+                ),
+              ListTile(
                 leading: const Icon(Symbols.beach_access),
                 title: const Text('Clear due'),
                 onTap: () => Navigator.of(context).pop('clear'),
@@ -274,23 +284,37 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
     switch (selected) {
       case 'today':
-        await _patch(
-          task,
-          {'due_date': todayYmd()},
-          successMessage: 'Due today',
-        );
+        await _patch(task, {
+          'due_date': todayYmd(),
+        }, successMessage: 'Due today');
       case 'tomorrow':
-        await _patch(
-          task,
-          {'due_date': tomorrowYmd()},
-          successMessage: 'Due tomorrow',
-        );
+        await _patch(task, {
+          'due_date': tomorrowYmd(),
+        }, successMessage: 'Due tomorrow');
       case 'clear':
-        await _patch(
-          task,
-          {'due_date': null},
-          successMessage: 'Due date cleared',
+        await _patch(task, {
+          'due_date': null,
+          'due_time': null,
+        }, successMessage: 'Due date cleared');
+      case 'clear_time':
+        await _patch(task, {
+          'due_time': null,
+        }, successMessage: 'Due time cleared');
+      case 'time':
+        final initial = _parseDueTime(task.dueTime) ?? TimeOfDay.now();
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: initial,
         );
+        if (picked != null && mounted) {
+          final time = formatTimeHm(picked);
+          final body = <String, dynamic>{
+            'due_time': time,
+            if (task.dueDate == null || task.dueDate!.isEmpty)
+              'due_date': todayYmd(),
+          };
+          await _patch(task, body, successMessage: 'Due time $time');
+        }
       case 'pick':
         final now = DateTime.now();
         final initial = _parseDue(task.dueDate) ?? now;
@@ -301,11 +325,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
           lastDate: DateTime(now.year + 5),
         );
         if (picked != null && mounted) {
-          await _patch(
-            task,
-            {'due_date': formatDateYmd(picked)},
-            successMessage: 'Due ${formatDateYmd(picked)}',
-          );
+          await _patch(task, {
+            'due_date': formatDateYmd(picked),
+          }, successMessage: 'Due ${formatDateYmd(picked)}');
         }
     }
   }
@@ -315,17 +337,22 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     return DateTime.tryParse(raw);
   }
 
+  TimeOfDay? _parseDueTime(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.isEmpty) return null;
+    final hour = int.tryParse(parts[0]);
+    if (hour == null) return null;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
+  }
+
   Future<void> _pickPriority(TududiTask task) async {
-    final selected = await showPriorityPicker(
-      context,
-      current: task.priority,
-    );
+    final selected = await showPriorityPicker(context, current: task.priority);
     if (selected != null && mounted) {
-      await _patch(
-        task,
-        {'priority': selected},
-        successMessage: 'Priority: ${priorityLabel(selected)}',
-      );
+      await _patch(task, {
+        'priority': selected,
+      }, successMessage: 'Priority: ${priorityLabel(selected)}');
     }
   }
 
@@ -357,8 +384,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
               for (final project in projects)
                 ListTile(
                   title: Text(project.name),
-                  trailing: (project.uid != null &&
-                              project.uid == task.projectUid) ||
+                  trailing:
+                      (project.uid != null && project.uid == task.projectUid) ||
                           project.id == task.projectId
                       ? const Icon(Symbols.check)
                       : null,
@@ -372,28 +399,20 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     if (selected == null || !mounted) return;
 
     if (selected == 'inbox') {
-      await _patch(
-        task,
-        {
-          'project_id': null,
-          'project_uid': null,
-          'project_name': null,
-        },
-        successMessage: 'Moved to Inbox',
-      );
+      await _patch(task, {
+        'project_id': null,
+        'project_uid': null,
+        'project_name': null,
+      }, successMessage: 'Moved to Inbox');
       return;
     }
 
     if (selected is TududiProject) {
-      await _patch(
-        task,
-        {
-          'project_id': selected.id,
-          if (selected.uid != null) 'project_uid': selected.uid,
-          'project_name': selected.name,
-        },
-        successMessage: 'Moved to ${selected.name}',
-      );
+      await _patch(task, {
+        'project_id': selected.id,
+        if (selected.uid != null) 'project_uid': selected.uid,
+        'project_name': selected.name,
+      }, successMessage: 'Moved to ${selected.name}');
     }
   }
 
@@ -409,11 +428,16 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
   }
 
   String _dueSubtitle(TududiTask task) {
-    if (task.dueDate == null || task.dueDate!.isEmpty) return 'None';
-    return [
-      task.dueDate,
-      if (task.dueTime != null) task.dueTime,
-    ].whereType<String>().join(' ');
+    if (task.dueDate == null || task.dueDate!.isEmpty) {
+      if (task.dueTime != null && task.dueTime!.isNotEmpty) {
+        return task.dueTime!;
+      }
+      return 'None';
+    }
+    if (task.dueTime != null && task.dueTime!.isNotEmpty) {
+      return '${task.dueDate} · ${task.dueTime}';
+    }
+    return task.dueDate!;
   }
 
   @override
@@ -433,10 +457,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text('Delete'),
-                ),
+                const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
             ),
             orElse: () => const SizedBox.shrink(),
@@ -482,8 +503,7 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Completed'),
                 value: _completedOverride ?? task.isDone,
-                onChanged:
-                    _saving ? null : (value) => _toggleDone(task, value),
+                onChanged: _saving ? null : (value) => _toggleDone(task, value),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -493,8 +513,8 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                     (_completedOverride ?? task.isDone)
                         ? TaskStatus.done
                         : (_completedOverride == false
-                            ? TaskStatus.notStarted
-                            : task.status),
+                              ? TaskStatus.notStarted
+                              : task.status),
                   ),
                 ),
                 trailing: const Icon(Symbols.chevron_right),

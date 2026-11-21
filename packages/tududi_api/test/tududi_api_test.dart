@@ -24,6 +24,33 @@ void main() {
   });
 
   group('models', () {
+    test('parses api key list and create payloads', () {
+      final listed = ApiKeyInfo.fromJson({
+        'id': 9,
+        'name': 'DootDoot · Pixel 8 · a1b2c3d4',
+        'token_prefix': 'tt_6f654c53c',
+        'created_at': '2026-11-12T14:38:10Z',
+        'last_used_at': null,
+        'expires_at': null,
+        'revoked_at': null,
+      });
+      expect(listed.id, 9);
+      expect(listed.isActive, isTrue);
+      expect(listed.tokenPrefix, 'tt_6f654c53c');
+
+      final created = ApiKeyCreated.fromJson({
+        'token': 'tt_abc',
+        'apiKey': {
+          'id': 10,
+          'name': 'DootDoot · Pixel 8 · a1b2c3d4',
+          'token_prefix': 'tt_abc',
+        },
+      });
+      expect(created.token, 'tt_abc');
+      expect(created.id, 10);
+      expect(created.name, 'DootDoot · Pixel 8 · a1b2c3d4');
+    });
+
     test('parses task json', () {
       final task = TududiTask.fromJson({
         'id': 1,

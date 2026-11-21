@@ -91,9 +91,9 @@ abstract final class BackgroundSync {
           TududiClientConfig(baseUrl: account.baseUrl, bearerToken: token),
         );
         try {
-          final today = await client.listTasks(type: 'today');
+          final active = await client.listTasks(type: 'all', status: 'active');
           final upcoming = await client.listTasks(type: 'upcoming');
-          allTasks.addAll([...today, ...upcoming]);
+          allTasks.addAll([...active, ...upcoming]);
 
           if (proUnlocked) {
             final cache = DriftOfflineCache.open(prefs: prefs);

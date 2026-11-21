@@ -51,7 +51,9 @@ class OfflineWriteCoordinator {
 
   String? get _accountId => _ref.read(activeAccountProvider)?.id;
 
-  Future<OfflineTaskMutationResult> createTask(Map<String, dynamic> body) async {
+  Future<OfflineTaskMutationResult> createTask(
+    Map<String, dynamic> body,
+  ) async {
     final client = await _ref.read(tududiClientProvider.future);
     if (client == null) {
       throw TududiApiException(message: 'Not signed in');
@@ -119,7 +121,8 @@ class OfflineWriteCoordinator {
         'body': body,
         if (base != null) 'base': _taskJson(base),
       });
-      final fallback = base ??
+      final fallback =
+          base ??
           TududiTask(id: 0, name: body['name']?.toString() ?? '', uid: uid);
       final optimistic = TududiTask(
         id: fallback.id,
@@ -130,19 +133,20 @@ class OfflineWriteCoordinator {
             : fallback.note,
         status: body['status'] is int
             ? body['status'] as int
-            : int.tryParse(body['status']?.toString() ?? '') ??
-                fallback.status,
+            : int.tryParse(body['status']?.toString() ?? '') ?? fallback.status,
         priority: body.containsKey('priority')
             ? body['priority']?.toString()
             : fallback.priority,
         dueDate: body.containsKey('due_date')
             ? body['due_date']?.toString()
             : fallback.dueDate,
-        dueTime: fallback.dueTime,
+        dueTime: body.containsKey('due_time')
+            ? body['due_time']?.toString()
+            : fallback.dueTime,
         projectId: body.containsKey('project_id')
             ? (body['project_id'] is int
-                ? body['project_id'] as int
-                : int.tryParse(body['project_id']?.toString() ?? ''))
+                  ? body['project_id'] as int
+                  : int.tryParse(body['project_id']?.toString() ?? ''))
             : fallback.projectId,
         projectUid: body.containsKey('project_uid')
             ? body['project_uid']?.toString()
@@ -150,8 +154,8 @@ class OfflineWriteCoordinator {
         projectName: body.containsKey('project_name')
             ? body['project_name']?.toString()
             : (body.containsKey('project_id') && body['project_id'] == null
-                ? null
-                : fallback.projectName),
+                  ? null
+                  : fallback.projectName),
         areaId: fallback.areaId,
         areaUid: fallback.areaUid,
         goalUid: fallback.goalUid,
@@ -163,28 +167,30 @@ class OfflineWriteCoordinator {
             : fallback.recurrenceType,
         recurrenceInterval: body.containsKey('recurrence_interval')
             ? (body['recurrence_interval'] is int
-                ? body['recurrence_interval'] as int
-                : int.tryParse(body['recurrence_interval']?.toString() ?? ''))
+                  ? body['recurrence_interval'] as int
+                  : int.tryParse(body['recurrence_interval']?.toString() ?? ''))
             : fallback.recurrenceInterval,
         recurrenceWeekday: body.containsKey('recurrence_weekday')
             ? (body['recurrence_weekday'] is int
-                ? body['recurrence_weekday'] as int
-                : int.tryParse(body['recurrence_weekday']?.toString() ?? ''))
+                  ? body['recurrence_weekday'] as int
+                  : int.tryParse(body['recurrence_weekday']?.toString() ?? ''))
             : fallback.recurrenceWeekday,
         recurrenceWeekdays: body.containsKey('recurrence_weekdays')
             ? _asIntList(body['recurrence_weekdays'])
             : fallback.recurrenceWeekdays,
         recurrenceMonthDay: body.containsKey('recurrence_month_day')
             ? (body['recurrence_month_day'] is int
-                ? body['recurrence_month_day'] as int
-                : int.tryParse(body['recurrence_month_day']?.toString() ?? ''))
+                  ? body['recurrence_month_day'] as int
+                  : int.tryParse(
+                      body['recurrence_month_day']?.toString() ?? '',
+                    ))
             : fallback.recurrenceMonthDay,
         recurrenceWeekOfMonth: body.containsKey('recurrence_week_of_month')
             ? (body['recurrence_week_of_month'] is int
-                ? body['recurrence_week_of_month'] as int
-                : int.tryParse(
-                    body['recurrence_week_of_month']?.toString() ?? '',
-                  ))
+                  ? body['recurrence_week_of_month'] as int
+                  : int.tryParse(
+                      body['recurrence_week_of_month']?.toString() ?? '',
+                    ))
             : fallback.recurrenceWeekOfMonth,
         recurrenceEndDate: body.containsKey('recurrence_end_date')
             ? body['recurrence_end_date']?.toString()
@@ -234,7 +240,8 @@ class OfflineWriteCoordinator {
         'body': {'done': done},
         if (current != null) 'base': _taskJson(current),
       });
-      final base = current ??
+      final base =
+          current ??
           TududiTask(
             id: 0,
             name: '',
@@ -265,7 +272,10 @@ class OfflineWriteCoordinator {
       if (accountId == null) return;
       await _patchTaskSnapshots(
         accountId,
-        (tasks) => [for (final t in tasks) if (t.uid != uid) t],
+        (tasks) => [
+          for (final t in tasks)
+            if (t.uid != uid) t,
+        ],
       );
     }
 
@@ -302,7 +312,9 @@ class OfflineWriteCoordinator {
     }
   }
 
-  Future<OfflineNoteMutationResult> createNote(Map<String, dynamic> body) async {
+  Future<OfflineNoteMutationResult> createNote(
+    Map<String, dynamic> body,
+  ) async {
     final client = await _ref.read(tududiClientProvider.future);
     if (client == null) {
       throw TududiApiException(message: 'Not signed in');
@@ -394,7 +406,10 @@ class OfflineWriteCoordinator {
       if (accountId == null) return;
       await _patchNotes(
         accountId,
-        (notes) => [for (final n in notes) if (n.uid != uid) n],
+        (notes) => [
+          for (final n in notes)
+            if (n.uid != uid) n,
+        ],
       );
     }
 
@@ -663,8 +678,7 @@ class OfflineWriteCoordinator {
         final server = await client.getTask(uid);
         final base = op['base'];
         if (base is Map) {
-          final baseTask =
-              TududiTask.fromJson(Map<String, dynamic>.from(base));
+          final baseTask = TududiTask.fromJson(Map<String, dynamic>.from(base));
           if (!_taskEquals(baseTask, server)) {
             // Server moved since enqueue.
             final body = op['body'] is Map
@@ -675,11 +689,11 @@ class OfflineWriteCoordinator {
               note: body['note']?.toString() ?? baseTask.note,
               status: kind == 'complete'
                   ? ((body['done'] != false)
-                      ? TaskStatus.done
-                      : TaskStatus.notStarted)
+                        ? TaskStatus.done
+                        : TaskStatus.notStarted)
                   : (body['status'] is int
-                      ? body['status'] as int
-                      : baseTask.status),
+                        ? body['status'] as int
+                        : baseTask.status),
             );
             if (!_taskEquals(localView, server)) {
               return _taskJson(server);
@@ -830,11 +844,7 @@ class OfflineWriteCoordinator {
           .map((e) => TududiTask.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       final next = transform(tasks);
-      await _cache.putJson(
-        accountId,
-        bucket,
-        next.map(_taskJson).toList(),
-      );
+      await _cache.putJson(accountId, bucket, next.map(_taskJson).toList());
     }
   }
 
@@ -845,26 +855,27 @@ class OfflineWriteCoordinator {
     final raw = await _cache.getJson(accountId, 'notes');
     final notes = raw is List
         ? raw
-            .whereType<Map>()
-            .map((e) => TududiNote.fromJson(Map<String, dynamic>.from(e)))
-            .toList()
+              .whereType<Map>()
+              .map((e) => TududiNote.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
         : <TududiNote>[];
     final next = transform(notes);
     await _cache.putJson(accountId, 'notes', next.map(_noteJson).toList());
   }
 
   static Map<String, dynamic> _taskJson(TududiTask t) => {
-        'id': t.id,
-        'uid': t.uid,
-        'name': t.displayName,
-        'status': t.status,
-        'due_date': t.dueDate,
-        'priority': t.priority,
-        'project_name': t.projectName,
-        if (t.note != null) 'note': t.note,
-        if (t.completedAt != null) 'completed_at': t.completedAt,
-        ...t.recurrenceToJson(),
-      };
+    'id': t.id,
+    'uid': t.uid,
+    'name': t.displayName,
+    'status': t.status,
+    'due_date': t.dueDate,
+    if (t.dueTime != null) 'due_time': t.dueTime,
+    'priority': t.priority,
+    'project_name': t.projectName,
+    if (t.note != null) 'note': t.note,
+    if (t.completedAt != null) 'completed_at': t.completedAt,
+    ...t.recurrenceToJson(),
+  };
 
   static List<int> _asIntList(Object? raw) {
     if (raw is! List) return const [];
@@ -874,21 +885,19 @@ class OfflineWriteCoordinator {
           item
         else if (item is num)
           item.toInt()
-        else
-          ...[
-            if (int.tryParse(item.toString()) != null)
-              int.parse(item.toString()),
-          ],
+        else ...[
+          if (int.tryParse(item.toString()) != null) int.parse(item.toString()),
+        ],
     ];
   }
 
   static Map<String, dynamic> _noteJson(TududiNote n) => {
-        'id': n.id,
-        'uid': n.uid,
-        'title': n.title,
-        if (n.content != null) 'content': n.content,
-        if (n.updatedAt != null) 'updated_at': n.updatedAt,
-      };
+    'id': n.id,
+    'uid': n.uid,
+    'title': n.title,
+    if (n.content != null) 'content': n.content,
+    if (n.updatedAt != null) 'updated_at': n.updatedAt,
+  };
 
   static bool _taskEquals(TududiTask a, TududiTask b) {
     return a.displayName == b.displayName &&
@@ -930,16 +939,16 @@ class SyncStatusNotifier extends Notifier<SyncStatus> {
   SyncStatus build() => const SyncStatus();
 
   void markOffline() => state = SyncStatus(
-        offline: true,
-        pendingCount: state.pendingCount,
-        conflictCount: state.conflictCount,
-      );
+    offline: true,
+    pendingCount: state.pendingCount,
+    conflictCount: state.conflictCount,
+  );
 
   void markOnline() => state = SyncStatus(
-        offline: false,
-        pendingCount: state.pendingCount,
-        conflictCount: state.conflictCount,
-      );
+    offline: false,
+    pendingCount: state.pendingCount,
+    conflictCount: state.conflictCount,
+  );
 
   Future<void> refreshPending() async {
     final account = ref.read(activeAccountProvider);
@@ -963,5 +972,6 @@ class SyncStatusNotifier extends Notifier<SyncStatus> {
   }
 }
 
-final syncStatusProvider =
-    NotifierProvider<SyncStatusNotifier, SyncStatus>(SyncStatusNotifier.new);
+final syncStatusProvider = NotifierProvider<SyncStatusNotifier, SyncStatus>(
+  SyncStatusNotifier.new,
+);

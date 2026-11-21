@@ -4,8 +4,32 @@ import 'package:tududi_api/tududi_api.dart';
 
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
+import 'task_list_organize.dart';
 
 enum TaskListFilter { today, upcoming, inbox, someday, all }
+
+Map<String, dynamic> _taskListCacheJson(TududiTask t) => {
+  'id': t.id,
+  'uid': t.uid,
+  'name': t.displayName,
+  'status': t.status,
+  'due_date': t.dueDate,
+  if (t.dueTime != null) 'due_time': t.dueTime,
+  'priority': t.priority,
+  'project_name': t.projectName,
+  if (t.note != null) 'note': t.note,
+  if (t.completedAt != null) 'completed_at': t.completedAt,
+  if (t.recurrenceType != null) 'recurrence_type': t.recurrenceType,
+};
+
+/// Assembles Today like Tududi metrics queries (not server `type=today` alone).
+Future<List<TududiTask>> fetchTodayTasks(TududiClient client) async {
+  final results = await Future.wait([
+    client.listTasks(type: 'all', status: 'active'),
+    client.listTasks(type: 'all', status: 'completed'),
+  ]);
+  return filterTodayCandidates([...results[0], ...results[1]]);
+}
 
 bool _offlineActive(Ref ref) {
   final isPro = ref.watch(proControllerProvider);
@@ -46,32 +70,23 @@ final tasksProvider = FutureProvider.family<List<TududiTask>, TaskListFilter>((
   if (client == null) return const [];
 
   try {
-    final type = switch (filter) {
-      TaskListFilter.today => 'today',
-      TaskListFilter.upcoming => 'upcoming',
-      TaskListFilter.inbox => 'inbox',
-      TaskListFilter.someday => 'someday',
-      TaskListFilter.all => null,
-    };
-    final tasks = await client.listTasks(type: type);
+    final List<TududiTask> tasks;
+    if (filter == TaskListFilter.today) {
+      tasks = await fetchTodayTasks(client);
+    } else {
+      final type = switch (filter) {
+        TaskListFilter.upcoming => 'upcoming',
+        TaskListFilter.inbox => 'inbox',
+        TaskListFilter.someday => 'someday',
+        TaskListFilter.all => null,
+        TaskListFilter.today => 'today',
+      };
+      tasks = await client.listTasks(type: type);
+    }
     await _putList(
       ref,
       'tasks_${filter.name}',
-      tasks
-          .map(
-            (t) => {
-              'id': t.id,
-              'uid': t.uid,
-              'name': t.displayName,
-              'status': t.status,
-              'due_date': t.dueDate,
-              'priority': t.priority,
-              'project_name': t.projectName,
-              if (t.note != null) 'note': t.note,
-              if (t.completedAt != null) 'completed_at': t.completedAt,
-            },
-          )
-          .toList(),
+      tasks.map(_taskListCacheJson).toList(),
     );
     return tasks;
   } catch (e) {
@@ -117,11 +132,7 @@ final projectsProvider = FutureProvider<List<TududiProject>>((ref) async {
   if (client == null) return const [];
   try {
     final projects = await client.listProjects();
-    await _putList(
-      ref,
-      'projects',
-      projects.map((p) => p.toJson()).toList(),
-    );
+    await _putList(ref, 'projects', projects.map((p) => p.toJson()).toList());
     return projects;
   } catch (e) {
     final cached = await _cachedList(ref, 'projects', TududiProject.fromJson);
@@ -135,11 +146,7 @@ final areasProvider = FutureProvider<List<TududiArea>>((ref) async {
   if (client == null) return const [];
   try {
     final areas = await client.listAreas();
-    await _putList(
-      ref,
-      'areas',
-      areas.map((a) => a.toJson()).toList(),
-    );
+    await _putList(ref, 'areas', areas.map((a) => a.toJson()).toList());
     return areas;
   } catch (e) {
     final cached = await _cachedList(ref, 'areas', TududiArea.fromJson);
