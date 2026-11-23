@@ -13,6 +13,7 @@ class ProUnlockSheet extends StatelessWidget {
     required this.onRestore,
     required this.onRedeem,
     required this.onDismiss,
+    this.priceLabel,
   });
 
   final bool isPro;
@@ -21,6 +22,7 @@ class ProUnlockSheet extends StatelessWidget {
   final VoidCallback onRestore;
   final VoidCallback onRedeem;
   final VoidCallback onDismiss;
+  final String? priceLabel;
 
   static const features = <(IconData, String)>[
     (Symbols.calendar_month, 'Calendar'),
@@ -30,7 +32,7 @@ class ProUnlockSheet extends StatelessWidget {
     (Symbols.cloud_off, 'Automatic offline sync'),
     (Symbols.space_dashboard, 'Custom bottom navigation'),
     (Symbols.switch_account, 'Unlimited accounts'),
-    (Symbols.widgets, 'Widgets (as they ship)'),
+    (Symbols.widgets, 'Home screen widgets (coming soon)'),
   ];
 
   @override
@@ -65,7 +67,7 @@ class ProUnlockSheet extends StatelessWidget {
             Text(
               isPro
                   ? 'Thanks for supporting the app. These enhancements are '
-                      'unlocked on this device.'
+                        'unlocked on this device.'
                   : 'One-time unlock. Core tasks stay free forever.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -77,11 +79,7 @@ class ProUnlockSheet extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    Icon(
-                      icon,
-                      size: 22,
-                      color: theme.colorScheme.primary,
-                    ),
+                    Icon(icon, size: 22, color: theme.colorScheme.primary),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(label, style: theme.textTheme.bodyLarge),
@@ -93,7 +91,11 @@ class ProUnlockSheet extends StatelessWidget {
             if (!isPro && canPurchase) ...[
               FilledButton(
                 onPressed: onUnlock,
-                child: const Text('Unlock Pro'),
+                child: Text(
+                  priceLabel == null || priceLabel!.isEmpty
+                      ? 'Unlock Pro'
+                      : 'Unlock Pro · $priceLabel',
+                ),
               ),
               TextButton(
                 onPressed: onRestore,
@@ -104,10 +106,7 @@ class ProUnlockSheet extends StatelessWidget {
                 child: const Text('Redeem promo code'),
               ),
             ] else if (isPro && canPurchase) ...[
-              FilledButton(
-                onPressed: onDismiss,
-                child: const Text('Done'),
-              ),
+              FilledButton(onPressed: onDismiss, child: const Text('Done')),
               TextButton(
                 onPressed: onRestore,
                 child: const Text('Restore purchase'),
@@ -118,10 +117,7 @@ class ProUnlockSheet extends StatelessWidget {
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 12),
-              FilledButton(
-                onPressed: onDismiss,
-                child: const Text('Got it'),
-              ),
+              FilledButton(onPressed: onDismiss, child: const Text('Got it')),
             ],
           ],
         ),

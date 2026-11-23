@@ -20,8 +20,8 @@ export 'task_providers.dart' show TaskListFilter;
 /// Persists Upcoming Active/Completed/All for the session.
 final upcomingStatusFilterProvider =
     NotifierProvider<UpcomingStatusFilterNotifier, UpcomingStatusFilter>(
-  UpcomingStatusFilterNotifier.new,
-);
+      UpcomingStatusFilterNotifier.new,
+    );
 
 class UpcomingStatusFilterNotifier extends Notifier<UpcomingStatusFilter> {
   @override
@@ -51,57 +51,39 @@ class TaskListView extends ConsumerWidget {
         final tasks = mergeTaskOverlay(rawTasks, overlay.tasks);
         return switch (filter) {
           TaskListFilter.today => _TodayTaskList(
-              tasks: tasks,
-              onRefresh: () async {
-                ref.invalidate(tasksProvider(filter));
-              },
-              onToggle: (task) => _toggle(context, ref, task),
-              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
-              onDueToday: (task) => patchTaskFields(
-                context,
-                ref,
-                task,
-                body: {'due_date': todayYmd()},
-                successMessage: 'Due today',
-              ),
-              onPickPriority: (task) =>
-                  pickAndSetTaskPriority(context, ref, task),
-            ),
+            tasks: tasks,
+            onRefresh: () async {
+              ref.invalidate(tasksProvider(filter));
+            },
+            onToggle: (task) => _toggle(context, ref, task),
+            onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+            onDueToday: (task) => pinTaskToToday(context, ref, task),
+            onPickPriority: (task) =>
+                pickAndSetTaskPriority(context, ref, task),
+          ),
           TaskListFilter.upcoming => _UpcomingTaskList(
-              tasks: tasks,
-              onRefresh: () async {
-                ref.invalidate(tasksProvider(filter));
-              },
-              onToggle: (task) => _toggle(context, ref, task),
-              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
-              onDueToday: (task) => patchTaskFields(
-                context,
-                ref,
-                task,
-                body: {'due_date': todayYmd()},
-                successMessage: 'Due today',
-              ),
-              onPickPriority: (task) =>
-                  pickAndSetTaskPriority(context, ref, task),
-            ),
+            tasks: tasks,
+            onRefresh: () async {
+              ref.invalidate(tasksProvider(filter));
+            },
+            onToggle: (task) => _toggle(context, ref, task),
+            onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+            onDueToday: (task) => pinTaskToToday(context, ref, task),
+            onPickPriority: (task) =>
+                pickAndSetTaskPriority(context, ref, task),
+          ),
           _ => _FlatTaskList(
-              tasks: tasks,
-              emptyLabel: _emptyLabel(filter),
-              onRefresh: () async {
-                ref.invalidate(tasksProvider(filter));
-              },
-              onToggle: (task) => _toggle(context, ref, task),
-              onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
-              onDueToday: (task) => patchTaskFields(
-                context,
-                ref,
-                task,
-                body: {'due_date': todayYmd()},
-                successMessage: 'Due today',
-              ),
-              onPickPriority: (task) =>
-                  pickAndSetTaskPriority(context, ref, task),
-            ),
+            tasks: tasks,
+            emptyLabel: _emptyLabel(filter),
+            onRefresh: () async {
+              ref.invalidate(tasksProvider(filter));
+            },
+            onToggle: (task) => _toggle(context, ref, task),
+            onDelete: (task) => deleteTaskWithConfirm(context, ref, task),
+            onDueToday: (task) => pinTaskToToday(context, ref, task),
+            onPickPriority: (task) =>
+                pickAndSetTaskPriority(context, ref, task),
+          ),
         };
       },
     );
@@ -125,24 +107,30 @@ class TaskListView extends ConsumerWidget {
     final uid = task.uid;
     if (uid == null) return;
     final done = !task.isDone;
+    final overlay = ref.read(editOverlayProvider.notifier);
+    final restoreStatus = done ? null : overlay.consumeOpenStatus(uid);
+    if (done) overlay.rememberOpenStatus(uid, task.status);
     final optimistic = task.copyWith(
-      status: done ? TaskStatus.done : TaskStatus.notStarted,
+      status: done ? TaskStatus.done : (restoreStatus ?? TaskStatus.notStarted),
     );
-    ref.read(editOverlayProvider.notifier).setTask(uid, optimistic);
+    overlay.setTask(uid, optimistic);
     try {
-      final result =
-          await ref.read(offlineWriteCoordinatorProvider).completeTask(
-                uid,
-                done: done,
-                current: task,
-              );
-      var after =
-          result.value.uid == uid ? result.value : result.value.copyWith(uid: uid);
+      final result = await ref
+          .read(offlineWriteCoordinatorProvider)
+          .completeTask(
+            uid,
+            done: done,
+            current: task,
+            restoreStatus: restoreStatus,
+          );
+      var after = result.value.uid == uid
+          ? result.value
+          : result.value.copyWith(uid: uid);
       if (done && !after.isDone) {
         // Recurring template advanced to the next occurrence.
-        ref.read(editHistoryProvider.notifier).push(
-              TaskUpdateCommand(before: task, after: after),
-            );
+        ref
+            .read(editHistoryProvider.notifier)
+            .push(TaskUpdateCommand(before: task, after: after));
         if (context.mounted) {
           showTaskCompleteSnackBar(
             context,
@@ -155,12 +143,14 @@ class TaskListView extends ConsumerWidget {
       }
       if (after.isDone != done) {
         after = after.copyWith(
-          status: done ? TaskStatus.done : TaskStatus.notStarted,
+          status: done
+              ? TaskStatus.done
+              : (restoreStatus ?? TaskStatus.notStarted),
         );
       }
-      ref.read(editHistoryProvider.notifier).push(
-            TaskUpdateCommand(before: task, after: after),
-          );
+      ref
+          .read(editHistoryProvider.notifier)
+          .push(TaskUpdateCommand(before: task, after: after));
       if (context.mounted) {
         showTaskCompleteSnackBar(
           context,
@@ -409,9 +399,7 @@ class _UpcomingTaskList extends ConsumerWidget {
                   const PopupMenuDivider(),
                   PopupMenuItem(
                     value: _UpcomingSortAction.toggleDirection,
-                    child: Text(
-                      sort.ascending ? 'Ascending' : 'Descending',
-                    ),
+                    child: Text(sort.ascending ? 'Ascending' : 'Descending'),
                   ),
                 ],
               ),

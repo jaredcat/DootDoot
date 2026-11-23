@@ -9,7 +9,8 @@ import '../../core/providers.dart';
 class TodaySectionVisibility {
   const TodaySectionVisibility({
     this.showOverdue = true,
-    this.showSuggested = true,
+    // Match Tududi web: Suggested off until the user opts in.
+    this.showSuggested = false,
     this.showCompleted = true,
   });
 
@@ -30,16 +31,16 @@ class TodaySectionVisibility {
   }
 
   Map<String, dynamic> toJson() => {
-        'showOverdue': showOverdue,
-        'showSuggested': showSuggested,
-        'showCompleted': showCompleted,
-      };
+    'showOverdue': showOverdue,
+    'showSuggested': showSuggested,
+    'showCompleted': showCompleted,
+  };
 
   factory TodaySectionVisibility.fromJson(Map<String, dynamic>? json) {
     if (json == null) return const TodaySectionVisibility();
     return TodaySectionVisibility(
       showOverdue: json['showOverdue'] as bool? ?? true,
-      showSuggested: json['showSuggested'] as bool? ?? true,
+      showSuggested: json['showSuggested'] as bool? ?? false,
       showCompleted: json['showCompleted'] as bool? ?? true,
     );
   }
@@ -61,9 +62,7 @@ class TodaySectionPrefsStore {
         return TodaySectionVisibility.fromJson(map);
       }
       if (map is Map) {
-        return TodaySectionVisibility.fromJson(
-          Map<String, dynamic>.from(map),
-        );
+        return TodaySectionVisibility.fromJson(Map<String, dynamic>.from(map));
       }
     } catch (_) {}
     return const TodaySectionVisibility();
@@ -76,8 +75,8 @@ class TodaySectionPrefsStore {
 
 final todaySectionVisibilityProvider =
     NotifierProvider<TodaySectionVisibilityNotifier, TodaySectionVisibility>(
-  TodaySectionVisibilityNotifier.new,
-);
+      TodaySectionVisibilityNotifier.new,
+    );
 
 class TodaySectionVisibilityNotifier extends Notifier<TodaySectionVisibility> {
   @override
@@ -90,8 +89,7 @@ class TodaySectionVisibilityNotifier extends Notifier<TodaySectionVisibility> {
   Future<void> update(TodaySectionVisibility value) async {
     state = value;
     final accountId = ref.read(activeAccountIdProvider) ?? 'default';
-    await TodaySectionPrefsStore(
-      ref.read(sharedPreferencesProvider),
-    ).save(accountId, value);
+    await TodaySectionPrefsStore(ref.read(sharedPreferencesProvider))
+        .save(accountId, value);
   }
 }

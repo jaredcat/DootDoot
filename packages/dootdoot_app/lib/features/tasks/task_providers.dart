@@ -15,11 +15,18 @@ Map<String, dynamic> _taskListCacheJson(TududiTask t) => {
   'status': t.status,
   'due_date': t.dueDate,
   if (t.dueTime != null) 'due_time': t.dueTime,
+  if (t.deferUntil != null) 'defer_until': t.deferUntil,
+  if (t.parentTaskId != null) 'parent_task_id': t.parentTaskId,
   'priority': t.priority,
+  if (t.projectId != null) 'project_id': t.projectId,
+  if (t.projectUid != null) 'project_uid': t.projectUid,
   'project_name': t.projectName,
   if (t.note != null) 'note': t.note,
   if (t.completedAt != null) 'completed_at': t.completedAt,
   if (t.recurrenceType != null) 'recurrence_type': t.recurrenceType,
+  if (t.tags.isNotEmpty) 'tags': t.tags.map((tag) => tag.toJson()).toList(),
+  if (t.subtasks.isNotEmpty)
+    'subtasks': t.subtasks.map(_taskListCacheJson).toList(),
 };
 
 /// Assembles Today like Tududi metrics queries (not server `type=today` alone).
@@ -28,7 +35,18 @@ Future<List<TududiTask>> fetchTodayTasks(TududiClient client) async {
     client.listTasks(type: 'all', status: 'active'),
     client.listTasks(type: 'all', status: 'completed'),
   ]);
-  return filterTodayCandidates([...results[0], ...results[1]]);
+  final active = excludeSubtasks(results[0]);
+  final completed = excludeSubtasks(results[1]);
+  final core = filterTodayCandidates([...active, ...completed]);
+  final coreKeys = {for (final t in core) t.uid ?? '${t.id}'};
+  final suggested = rankSuggestedCandidates(
+    active.where((t) => !coreKeys.contains(t.uid ?? '${t.id}')),
+  );
+  final deduped = <String, TududiTask>{};
+  for (final task in [...core, ...suggested]) {
+    deduped[task.uid ?? '${task.id}'] = task;
+  }
+  return deduped.values.toList();
 }
 
 bool _offlineActive(Ref ref) {
@@ -81,7 +99,7 @@ final tasksProvider = FutureProvider.family<List<TududiTask>, TaskListFilter>((
         TaskListFilter.all => null,
         TaskListFilter.today => 'today',
       };
-      tasks = await client.listTasks(type: type);
+      tasks = excludeSubtasks(await client.listTasks(type: type));
     }
     await _putList(
       ref,
@@ -124,6 +142,16 @@ final taskDetailProvider = FutureProvider.family<TududiTask, String>((
       }
     }
     rethrow;
+  }
+});
+
+final tagsProvider = FutureProvider<List<TududiTag>>((ref) async {
+  final client = await ref.watch(tududiClientProvider.future);
+  if (client == null) return const [];
+  try {
+    return await client.listTags();
+  } catch (_) {
+    return const [];
   }
 });
 

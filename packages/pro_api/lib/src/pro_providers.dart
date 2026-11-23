@@ -6,8 +6,9 @@ import 'free_pro_controller.dart';
 import 'pro_controller.dart';
 import 'pro_unlock_sheet.dart';
 
-final proControllerProvider =
-    NotifierProvider<ProController, bool>(FreeProController.new);
+final proControllerProvider = NotifierProvider<ProController, bool>(
+  FreeProController.new,
+);
 
 /// Returns `true` when another account may be added under the current Pro cap.
 bool canAddAccount({
@@ -20,10 +21,7 @@ bool canAddAccount({
 }
 
 /// Restores purchases and shows a snackbar with the outcome.
-Future<bool> restoreProWithFeedback(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<bool> restoreProWithFeedback(BuildContext context, WidgetRef ref) async {
   final controller = ref.read(proControllerProvider.notifier);
   try {
     final unlocked = await controller.restore();
@@ -41,19 +39,15 @@ Future<bool> restoreProWithFeedback(
     return unlocked;
   } on ProPurchaseException catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     }
     return false;
   }
 }
 
 /// Confirms the Play redeem steps, then starts checkout (or iOS redeem sheet).
-Future<void> redeemProWithFeedback(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<void> redeemProWithFeedback(BuildContext context, WidgetRef ref) async {
   final isAndroid = Theme.of(context).platform == TargetPlatform.android;
   final proceed = await showDialog<bool>(
     context: context,
@@ -62,9 +56,9 @@ Future<void> redeemProWithFeedback(
       content: Text(
         isAndroid
             ? 'Play checkout will open next. Tap your payment method, '
-                'then Redeem, and enter your promo code.'
+                  'then Redeem, and enter your promo code.'
             : 'The App Store redeem sheet will open so you can enter '
-                'your offer code.',
+                  'your offer code.',
       ),
       actions: [
         TextButton(
@@ -85,26 +79,24 @@ Future<void> redeemProWithFeedback(
     final opened = await controller.redeemPromoCode();
     if (!context.mounted || opened) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not start promo code redeem'),
-      ),
+      const SnackBar(content: Text('Could not start promo code redeem')),
     );
   } on ProPurchaseException catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 }
 
 /// Shows the Pro unlock / status sheet. Returns `true` if unlock was started.
-Future<bool> showProUnlockSheet(
-  BuildContext context,
-  WidgetRef ref,
-) async {
+Future<bool> showProUnlockSheet(BuildContext context, WidgetRef ref) async {
   final controller = ref.read(proControllerProvider.notifier);
   final isPro = ref.read(proControllerProvider);
+  final priceLabel = controller.canPurchase
+      ? await controller.loadProductPrice()
+      : null;
+  if (!context.mounted) return false;
   final result = await showModalBottomSheet<bool>(
     context: context,
     showDragHandle: true,
@@ -112,6 +104,7 @@ Future<bool> showProUnlockSheet(
     builder: (sheetContext) => ProUnlockSheet(
       isPro: isPro,
       canPurchase: controller.canPurchase,
+      priceLabel: priceLabel,
       onUnlock: () => Navigator.pop(sheetContext, true),
       onRestore: () async {
         if (sheetContext.mounted) Navigator.pop(sheetContext, false);
@@ -129,9 +122,8 @@ Future<bool> showProUnlockSheet(
       await controller.purchase();
     } on ProPurchaseException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
       }
       return false;
     }
@@ -186,9 +178,7 @@ Future<void> openProFeature(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'This enhancement is available with DootDoot Pro.',
-          ),
+          content: Text('This enhancement is available with DootDoot Pro.'),
         ),
       );
     }

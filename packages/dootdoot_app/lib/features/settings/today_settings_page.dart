@@ -40,7 +40,9 @@ class TodaySettingsPage extends ConsumerWidget {
           SwitchListTile(
             secondary: const Icon(Symbols.lightbulb),
             title: const Text('Suggested'),
-            subtitle: const Text('Recommended next tasks'),
+            subtitle: const Text(
+              'Up to 10 recommended tasks (undated / upcoming)',
+            ),
             value: visibility.showSuggested,
             onChanged: (v) => ref
                 .read(todaySectionVisibilityProvider.notifier)

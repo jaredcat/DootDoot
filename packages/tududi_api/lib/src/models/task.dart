@@ -65,6 +65,8 @@ class TududiTask extends Equatable {
     this.areaId,
     this.areaUid,
     this.goalUid,
+    this.parentTaskId,
+    this.deferUntil,
     this.tags = const [],
     this.subtasks = const [],
     this.completedAt,
@@ -94,6 +96,8 @@ class TududiTask extends Equatable {
   final int? areaId;
   final String? areaUid;
   final String? goalUid;
+  final int? parentTaskId;
+  final String? deferUntil;
   final List<TududiTag> tags;
   final List<TududiTask> subtasks;
   final String? completedAt;
@@ -111,6 +115,10 @@ class TududiTask extends Equatable {
   bool get isDone => status == TaskStatus.done;
   bool get isOpen => TaskStatus.isOpen(status);
   bool get isRecurring => RecurrenceType.isActive(recurrenceType);
+  bool get isSubtask => parentTaskId != null;
+  bool get hasTodayTag => tags.any((t) => t.name.toLowerCase() == 'today');
+  bool get hasSomedayTag => tags.any((t) => t.name.toLowerCase() == 'someday');
+  bool get hasUrgentTag => tags.any((t) => t.name.toLowerCase() == 'urgent');
   String get displayName =>
       originalName?.isNotEmpty == true ? originalName! : name;
 
@@ -129,9 +137,12 @@ class TududiTask extends Equatable {
     int? areaId,
     String? areaUid,
     String? goalUid,
+    int? parentTaskId,
+    String? deferUntil,
     List<TududiTag>? tags,
     List<TududiTask>? subtasks,
     String? completedAt,
+    bool clearDeferUntil = false,
     String? recurrenceType,
     int? recurrenceInterval,
     int? recurrenceWeekday,
@@ -159,11 +170,14 @@ class TududiTask extends Equatable {
       areaId: areaId ?? this.areaId,
       areaUid: areaUid ?? this.areaUid,
       goalUid: goalUid ?? this.goalUid,
+      parentTaskId: parentTaskId ?? this.parentTaskId,
+      deferUntil: clearDeferUntil ? null : (deferUntil ?? this.deferUntil),
       tags: tags ?? this.tags,
       subtasks: subtasks ?? this.subtasks,
       completedAt: completedAt ?? this.completedAt,
-      recurrenceType:
-          clearRecurrence ? null : (recurrenceType ?? this.recurrenceType),
+      recurrenceType: clearRecurrence
+          ? null
+          : (recurrenceType ?? this.recurrenceType),
       recurrenceInterval: clearRecurrence
           ? null
           : (recurrenceInterval ?? this.recurrenceInterval),
@@ -182,8 +196,9 @@ class TududiTask extends Equatable {
       recurrenceEndDate: clearRecurrence
           ? null
           : (recurrenceEndDate ?? this.recurrenceEndDate),
-      completionBased:
-          clearRecurrence ? false : (completionBased ?? this.completionBased),
+      completionBased: clearRecurrence
+          ? false
+          : (completionBased ?? this.completionBased),
       originalName: originalName ?? this.originalName,
       todayMoveCount: todayMoveCount ?? this.todayMoveCount,
     );
@@ -206,11 +221,16 @@ class TududiTask extends Equatable {
       dueDate: json['due_date']?.toString(),
       dueTime: json['due_time']?.toString(),
       projectId: _asIntOrNull(json['project_id']),
-      projectUid: json['project_uid']?.toString() ?? project?['uid']?.toString(),
+      projectUid:
+          json['project_uid']?.toString() ?? project?['uid']?.toString(),
       projectName: project?['name']?.toString(),
       areaId: _asIntOrNull(json['area_id']),
       areaUid: json['area_uid']?.toString(),
       goalUid: json['goal_uid']?.toString(),
+      parentTaskId: _asIntOrNull(
+        json['parent_task_id'] ?? json['parentTaskId'],
+      ),
+      deferUntil: json['defer_until']?.toString(),
       tags: _parseTags(tagsJson),
       subtasks: _parseTasks(subtasksJson),
       completedAt: json['completed_at']?.toString(),
@@ -228,36 +248,41 @@ class TududiTask extends Equatable {
   }
 
   Map<String, dynamic> toCreateJson() => {
-        // Prefer the user-visible title; tududi often keeps that in original_name.
-        'name': displayName,
-        if (note != null && note!.isNotEmpty) 'note': note,
-        'status': status,
-        if (priority != null) 'priority': priority,
-        if (dueDate != null) 'due_date': dueDate,
-        if (dueTime != null) 'due_time': dueTime,
-        if (projectId != null) 'project_id': projectId,
-        if (projectUid != null) 'project_uid': projectUid,
-        if (areaId != null) 'area_id': areaId,
-        if (areaUid != null) 'area_uid': areaUid,
-        if (tags.isNotEmpty) 'tags': tags.map((t) => t.name).toList(),
-        ...recurrenceToJson(),
-      };
+    // Prefer the user-visible title; tududi often keeps that in original_name.
+    'name': displayName,
+    if (note != null && note!.isNotEmpty) 'note': note,
+    'status': status,
+    if (priority != null) 'priority': priority,
+    if (dueDate != null) 'due_date': dueDate,
+    if (dueTime != null) 'due_time': dueTime,
+    if (projectId != null) 'project_id': projectId,
+    if (projectUid != null) 'project_uid': projectUid,
+    if (areaId != null) 'area_id': areaId,
+    if (areaUid != null) 'area_uid': areaUid,
+    if (parentTaskId != null) 'parent_task_id': parentTaskId,
+    if (deferUntil != null) 'defer_until': deferUntil,
+    'tags': tags.map((t) => t.name).toList(),
+    ...recurrenceToJson(),
+  };
 
   Map<String, dynamic> toPatchJson() => {
-        // Prefer the user-visible title; tududi often keeps that in original_name.
-        'name': displayName,
-        if (note != null) 'note': note,
-        'status': status,
-        if (priority != null) 'priority': priority,
-        'due_date': dueDate,
-        'due_time': dueTime,
-        if (projectId != null) 'project_id': projectId,
-        if (projectUid != null) 'project_uid': projectUid,
-        if (areaId != null) 'area_id': areaId,
-        if (areaUid != null) 'area_uid': areaUid,
-        if (tags.isNotEmpty) 'tags': tags.map((t) => t.name).toList(),
-        ...recurrenceToJson(),
-      };
+    // Prefer the user-visible title; tududi often keeps that in original_name.
+    'name': displayName,
+    if (note != null) 'note': note,
+    'status': status,
+    if (priority != null) 'priority': priority,
+    'due_date': dueDate,
+    'due_time': dueTime,
+    'defer_until': deferUntil,
+    if (projectId != null) 'project_id': projectId,
+    if (projectUid != null) 'project_uid': projectUid,
+    if (areaId != null) 'area_id': areaId,
+    if (areaUid != null) 'area_uid': areaUid,
+    if (parentTaskId != null) 'parent_task_id': parentTaskId,
+    // Always send tags so clearing is possible.
+    'tags': tags.map((t) => t.name).toList(),
+    ...recurrenceToJson(),
+  };
 
   /// JSON fragment for create/patch of recurrence fields.
   Map<String, dynamic> recurrenceToJson() {
@@ -270,7 +295,8 @@ class TududiTask extends Equatable {
       if (recurrenceWeekday != null) 'recurrence_weekday': recurrenceWeekday,
       if (recurrenceWeekdays.isNotEmpty)
         'recurrence_weekdays': recurrenceWeekdays,
-      if (recurrenceMonthDay != null) 'recurrence_month_day': recurrenceMonthDay,
+      if (recurrenceMonthDay != null)
+        'recurrence_month_day': recurrenceMonthDay,
       if (recurrenceWeekOfMonth != null)
         'recurrence_week_of_month': recurrenceWeekOfMonth,
       if (recurrenceEndDate != null && recurrenceEndDate!.isNotEmpty)
@@ -281,15 +307,15 @@ class TududiTask extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        uid,
-        name,
-        status,
-        dueDate,
-        projectId,
-        recurrenceType,
-        recurrenceInterval,
-      ];
+    id,
+    uid,
+    name,
+    status,
+    dueDate,
+    projectId,
+    recurrenceType,
+    recurrenceInterval,
+  ];
 }
 
 List<TududiTag> _parseTags(Object? raw) {
@@ -316,10 +342,9 @@ List<int> _parseIntList(Object? raw) {
         item
       else if (item is num)
         item.toInt()
-      else
-        ...[
-          if (int.tryParse(item.toString()) != null) int.parse(item.toString()),
-        ],
+      else ...[
+        if (int.tryParse(item.toString()) != null) int.parse(item.toString()),
+      ],
   ];
 }
 

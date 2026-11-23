@@ -74,19 +74,14 @@ class ProjectDetailPage extends ConsumerWidget {
                         final done = !task.isDone;
                         final result = await ref
                             .read(offlineWriteCoordinatorProvider)
-                            .completeTask(
-                              taskUid,
-                              done: done,
-                              current: task,
-                            );
+                            .completeTask(taskUid, done: done, current: task);
                         final after = result.value.uid == taskUid
                             ? result.value
                             : result.value.copyWith(uid: taskUid);
-                        ref.read(editHistoryProvider.notifier).push(
-                              TaskUpdateCommand(
-                                before: task,
-                                after: after,
-                              ),
+                        ref
+                            .read(editHistoryProvider.notifier)
+                            .push(
+                              TaskUpdateCommand(before: task, after: after),
                             );
                         if (context.mounted) {
                           showTaskCompleteSnackBar(
@@ -98,9 +93,9 @@ class ProjectDetailPage extends ConsumerWidget {
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
                         }
                       } finally {
                         ref.invalidate(projectDetailProvider(uid));
@@ -117,21 +112,15 @@ class ProjectDetailPage extends ConsumerWidget {
                       onDeleted: () =>
                           ref.invalidate(projectDetailProvider(uid)),
                     ),
-                    onDueToday: () => patchTaskFields(
-                      context,
-                      ref,
-                      task,
-                      body: {'due_date': todayYmd()},
-                      successMessage: 'Due today',
-                      onDone: () =>
-                          ref.invalidate(projectDetailProvider(uid)),
-                    ),
+                    onDueToday: () async {
+                      await pinTaskToToday(context, ref, task);
+                      ref.invalidate(projectDetailProvider(uid));
+                    },
                     onPickPriority: () => pickAndSetTaskPriority(
                       context,
                       ref,
                       task,
-                      onDone: () =>
-                          ref.invalidate(projectDetailProvider(uid)),
+                      onDone: () => ref.invalidate(projectDetailProvider(uid)),
                     ),
                   ),
                 ),

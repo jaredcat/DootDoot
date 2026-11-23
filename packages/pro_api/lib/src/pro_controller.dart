@@ -25,6 +25,9 @@ abstract class ProController extends Notifier<bool> {
   /// Whether this binary can start an in-app purchase flow.
   bool get canPurchase;
 
+  /// Localized one-time price for the unlock button, when available.
+  Future<String?> loadProductPrice() async => null;
+
   /// Whether offline task-list caching is active.
   bool get offlineEnabled => state;
 

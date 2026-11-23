@@ -12,6 +12,7 @@ TududiTask task({
   String? projectName,
   String? completedAt,
   String? recurrenceType,
+  List<TududiTag> tags = const [],
 }) {
   return TududiTask(
     id: id,
@@ -23,6 +24,7 @@ TududiTask task({
     projectName: projectName,
     completedAt: completedAt,
     recurrenceType: recurrenceType,
+    tags: tags,
   );
 }
 
@@ -101,11 +103,43 @@ void main() {
           task(id: 2, name: 'Undated suggestion'),
         ],
         now: now,
-        visibility: const TodaySectionVisibility(showOverdue: false),
+        visibility: const TodaySectionVisibility(
+          showOverdue: false,
+          showSuggested: true,
+        ),
       );
 
       expect(sections.map((s) => s.title).toList(), ['Suggested']);
       expect(sections.single.tasks.single.name, 'Undated suggestion');
+    });
+
+    test('skips deferred and subtasks; today tag lands in Due today', () {
+      final sections = organizeTodaySections(
+        [
+          task(
+            id: 1,
+            name: 'Pinned',
+            tags: [const TududiTag(id: 1, name: 'today')],
+          ),
+          TududiTask(
+            id: 2,
+            name: 'Deferred',
+            dueDate: '2026-11-08',
+            deferUntil: '2099-01-01T09:00:00',
+          ),
+          TududiTask(
+            id: 3,
+            name: 'Child',
+            parentTaskId: 1,
+            dueDate: '2026-11-08',
+          ),
+        ],
+        now: now,
+        visibility: const TodaySectionVisibility(showSuggested: true),
+      );
+
+      expect(sections.single.title, 'Due today');
+      expect(sections.single.tasks.single.name, 'Pinned');
     });
   });
 

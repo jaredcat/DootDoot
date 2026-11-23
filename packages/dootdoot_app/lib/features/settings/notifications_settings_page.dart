@@ -105,32 +105,38 @@ class NotificationsSettingsPage extends ConsumerWidget {
             subtitle: Text(
               isPro
                   ? 'Evening nudge for habits not done today'
-                  : 'Pro enhancement',
+                  : 'Pro enhancement — tap to unlock',
             ),
             secondary: isPro ? null : const ProBadge(),
             value: isPro && prefs.habitsEnabled,
-            onChanged: !isPro
-                ? null
-                : (value) async {
-                    await prefs.setHabitsEnabled(value);
-                    ref.invalidate(notificationPreferencesProvider);
-                    ref.invalidate(notificationScheduleProvider);
-                  },
+            onChanged: (value) async {
+              if (!isPro) {
+                await showProUnlockSheet(context, ref);
+                return;
+              }
+              await prefs.setHabitsEnabled(value);
+              ref.invalidate(notificationPreferencesProvider);
+              ref.invalidate(notificationScheduleProvider);
+            },
           ),
           SwitchListTile(
             title: const Text('Goal deadlines'),
             subtitle: Text(
-              isPro ? 'Alert on a goal’s target date' : 'Pro enhancement',
+              isPro
+                  ? 'Alert on a goal’s target date'
+                  : 'Pro enhancement — tap to unlock',
             ),
             secondary: isPro ? null : const ProBadge(),
             value: isPro && prefs.goalsEnabled,
-            onChanged: !isPro
-                ? null
-                : (value) async {
-                    await prefs.setGoalsEnabled(value);
-                    ref.invalidate(notificationPreferencesProvider);
-                    ref.invalidate(notificationScheduleProvider);
-                  },
+            onChanged: (value) async {
+              if (!isPro) {
+                await showProUnlockSheet(context, ref);
+                return;
+              }
+              await prefs.setGoalsEnabled(value);
+              ref.invalidate(notificationPreferencesProvider);
+              ref.invalidate(notificationScheduleProvider);
+            },
           ),
           const Divider(),
           ListTile(

@@ -10,6 +10,7 @@ import '../../core/edit_history/edit_history.dart';
 import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import 'recurrence_picker.dart';
+import 'tag_picker.dart';
 import 'task_actions.dart';
 import 'task_providers.dart';
 import 'task_status_display.dart';
@@ -93,17 +94,25 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     final before = task.uid == widget.uid
         ? task
         : task.copyWith(uid: widget.uid);
+    final overlay = ref.read(editOverlayProvider.notifier);
+    final restoreStatus = done ? null : overlay.consumeOpenStatus(widget.uid);
+    if (done) overlay.rememberOpenStatus(widget.uid, before.status);
     final optimistic = before.copyWith(
-      status: done ? TaskStatus.done : TaskStatus.notStarted,
+      status: done ? TaskStatus.done : (restoreStatus ?? TaskStatus.notStarted),
     );
     // Flip the switch and Status row immediately — don't wait on the network.
     setState(() => _completedOverride = done);
-    ref.read(editOverlayProvider.notifier).setTask(widget.uid, optimistic);
+    overlay.setTask(widget.uid, optimistic);
 
     try {
       final result = await ref
           .read(offlineWriteCoordinatorProvider)
-          .completeTask(widget.uid, done: done, current: before);
+          .completeTask(
+            widget.uid,
+            done: done,
+            current: before,
+            restoreStatus: restoreStatus,
+          );
       var after = result.value.uid == widget.uid
           ? result.value
           : result.value.copyWith(uid: widget.uid);
@@ -128,7 +137,9 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
 
       if (after.isDone != done) {
         after = after.copyWith(
-          status: done ? TaskStatus.done : TaskStatus.notStarted,
+          status: done
+              ? TaskStatus.done
+              : (restoreStatus ?? TaskStatus.notStarted),
         );
       }
       ref
@@ -552,6 +563,28 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickProject(task),
               ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Defer until'),
+                subtitle: Text(
+                  task.deferUntil == null || task.deferUntil!.isEmpty
+                      ? 'None'
+                      : task.deferUntil!,
+                ),
+                trailing: const Icon(Symbols.chevron_right),
+                onTap: _saving ? null : () => _pickDefer(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Tags'),
+                subtitle: Text(
+                  task.tags.isEmpty
+                      ? 'None'
+                      : task.tags.map((t) => t.name).join(', '),
+                ),
+                trailing: const Icon(Symbols.chevron_right),
+                onTap: _saving ? null : () => _pickTags(task),
+              ),
               if (task.tags.isNotEmpty)
                 Wrap(
                   spacing: 8,
@@ -566,28 +599,212 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 maxLines: 8,
                 decoration: const InputDecoration(hintText: 'Add details…'),
               ),
-              if (task.subtasks.isNotEmpty) ...[
-                const SizedBox(height: 16),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Subtasks',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (!task.isSubtask)
+                    TextButton.icon(
+                      onPressed: _saving ? null : () => _addSubtask(task),
+                      icon: const Icon(Symbols.add, size: 18),
+                      label: const Text('Add'),
+                    ),
+                ],
+              ),
+              if (task.subtasks.isEmpty)
                 Text(
-                  'Subtasks',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  'No subtasks',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
-                ...task.subtasks.map(
-                  (s) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
+              ...task.subtasks.map(
+                (s) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: IconButton(
+                    icon: Icon(
                       s.isDone
                           ? Symbols.check_box
                           : Symbols.check_box_outline_blank,
                     ),
-                    title: Text(s.displayName),
+                    onPressed: _saving || s.uid == null
+                        ? null
+                        : () => _toggleSubtask(s),
                   ),
+                  title: Text(s.displayName),
+                  trailing: s.uid == null
+                      ? null
+                      : const Icon(Symbols.chevron_right),
+                  onTap: s.uid == null
+                      ? null
+                      : () => context.push('/task/${s.uid}'),
                 ),
-              ],
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _pickTags(TududiTask task) async {
+    final all = await ref.read(tagsProvider.future);
+    if (!mounted) return;
+    final names = await showTagPicker(
+      context,
+      selected: task.tags,
+      allTags: all,
+    );
+    if (names == null || !mounted) return;
+    await _patch(task, {
+      'tags': names,
+    }, successMessage: names.isEmpty ? 'Tags cleared' : 'Tags updated');
+    ref.invalidate(tagsProvider);
+  }
+
+  Future<void> _pickDefer(TududiTask task) async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Defer until',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Symbols.today),
+                title: const Text('Tomorrow morning'),
+                onTap: () => Navigator.of(context).pop('tomorrow'),
+              ),
+              ListTile(
+                leading: const Icon(Symbols.calendar_month),
+                title: const Text('Pick date…'),
+                onTap: () => Navigator.of(context).pop('pick'),
+              ),
+              ListTile(
+                leading: const Icon(Symbols.event_busy),
+                title: const Text('Clear defer'),
+                onTap: () => Navigator.of(context).pop('clear'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    switch (selected) {
+      case 'clear':
+        await _patch(task, {
+          'defer_until': null,
+        }, successMessage: 'Defer cleared');
+      case 'tomorrow':
+        final tomorrow = DateTime.now().add(const Duration(days: 1));
+        final at = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9);
+        await _patch(task, {
+          'defer_until': at.toIso8601String(),
+        }, successMessage: 'Deferred until tomorrow 9:00');
+      case 'pick':
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: now.add(const Duration(days: 1)),
+          firstDate: now,
+          lastDate: DateTime(now.year + 5),
+        );
+        if (picked == null || !mounted) return;
+        final at = DateTime(picked.year, picked.month, picked.day, 9);
+        await _patch(task, {
+          'defer_until': at.toIso8601String(),
+        }, successMessage: 'Deferred until ${formatDateYmd(picked)}');
+    }
+  }
+
+  Future<void> _toggleSubtask(TududiTask subtask) async {
+    final uid = subtask.uid;
+    if (uid == null) return;
+    final done = !subtask.isDone;
+    if (done) playCompletionSound();
+    final overlay = ref.read(editOverlayProvider.notifier);
+    final restoreStatus = done ? null : overlay.consumeOpenStatus(uid);
+    if (done) overlay.rememberOpenStatus(uid, subtask.status);
+    try {
+      await ref
+          .read(offlineWriteCoordinatorProvider)
+          .completeTask(
+            uid,
+            done: done,
+            current: subtask,
+            restoreStatus: restoreStatus,
+          );
+      ref.invalidate(taskDetailProvider(widget.uid));
+      invalidateAllTaskLists(ref);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _addSubtask(TududiTask parent) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add subtask'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Subtask name'),
+            onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+    try {
+      await ref.read(offlineWriteCoordinatorProvider).createTask({
+        'name': name,
+        'parent_task_id': parent.id,
+        if (parent.projectId != null) 'project_id': parent.projectId,
+        if (parent.projectUid != null) 'project_uid': parent.projectUid,
+      });
+      ref.invalidate(taskDetailProvider(widget.uid));
+      invalidateAllTaskLists(ref);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Subtask added')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }

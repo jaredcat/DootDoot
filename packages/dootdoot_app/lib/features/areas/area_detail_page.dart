@@ -13,32 +13,32 @@ import '../tasks/task_tile.dart';
 
 final areaDetailProvider =
     FutureProvider.family<(TududiArea, List<TududiTask>), String>((
-  ref,
-  uid,
-) async {
-  final client = await ref.watch(tududiClientProvider.future);
-  if (client == null) {
-    throw TududiApiException(message: 'Not signed in');
-  }
-  final areas = await client.listAreas();
-  TududiArea? area;
-  for (final a in areas) {
-    if (a.uid == uid) {
-      area = a;
-      break;
-    }
-  }
-  if (area == null) {
-    throw TududiApiException(message: 'Area not found');
-  }
-  var tasks = await client.listTasks(areaUid: uid);
-  if (tasks.isEmpty) {
-    // Fallback if server ignores area_uid: filter client-side.
-    final all = await client.listTasks();
-    tasks = all.where((t) => t.areaUid == uid).toList();
-  }
-  return (area, tasks);
-});
+      ref,
+      uid,
+    ) async {
+      final client = await ref.watch(tududiClientProvider.future);
+      if (client == null) {
+        throw TududiApiException(message: 'Not signed in');
+      }
+      final areas = await client.listAreas();
+      TududiArea? area;
+      for (final a in areas) {
+        if (a.uid == uid) {
+          area = a;
+          break;
+        }
+      }
+      if (area == null) {
+        throw TududiApiException(message: 'Area not found');
+      }
+      var tasks = await client.listTasks(areaUid: uid);
+      if (tasks.isEmpty) {
+        // Fallback if server ignores area_uid: filter client-side.
+        final all = await client.listTasks();
+        tasks = all.where((t) => t.areaUid == uid).toList();
+      }
+      return (area, tasks);
+    });
 
 class AreaDetailPage extends ConsumerWidget {
   const AreaDetailPage({super.key, required this.uid});
@@ -67,8 +67,7 @@ class AreaDetailPage extends ConsumerWidget {
             onRefresh: () async => ref.invalidate(areaDetailProvider(uid)),
             child: ListView(
               children: [
-                if (area.description != null &&
-                    area.description!.isNotEmpty)
+                if (area.description != null && area.description!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(area.description!),
@@ -89,19 +88,14 @@ class AreaDetailPage extends ConsumerWidget {
                         final done = !task.isDone;
                         final result = await ref
                             .read(offlineWriteCoordinatorProvider)
-                            .completeTask(
-                              taskUid,
-                              done: done,
-                              current: task,
-                            );
+                            .completeTask(taskUid, done: done, current: task);
                         final after = result.value.uid == taskUid
                             ? result.value
                             : result.value.copyWith(uid: taskUid);
-                        ref.read(editHistoryProvider.notifier).push(
-                              TaskUpdateCommand(
-                                before: task,
-                                after: after,
-                              ),
+                        ref
+                            .read(editHistoryProvider.notifier)
+                            .push(
+                              TaskUpdateCommand(before: task, after: after),
                             );
                         if (context.mounted) {
                           showTaskCompleteSnackBar(
@@ -113,9 +107,9 @@ class AreaDetailPage extends ConsumerWidget {
                         }
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(e.toString())),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(e.toString())));
                         }
                       } finally {
                         ref.invalidate(areaDetailProvider(uid));
@@ -131,14 +125,10 @@ class AreaDetailPage extends ConsumerWidget {
                       task,
                       onDeleted: () => ref.invalidate(areaDetailProvider(uid)),
                     ),
-                    onDueToday: () => patchTaskFields(
-                      context,
-                      ref,
-                      task,
-                      body: {'due_date': todayYmd()},
-                      successMessage: 'Due today',
-                      onDone: () => ref.invalidate(areaDetailProvider(uid)),
-                    ),
+                    onDueToday: () async {
+                      await pinTaskToToday(context, ref, task);
+                      ref.invalidate(areaDetailProvider(uid));
+                    },
                     onPickPriority: () => pickAndSetTaskPriority(
                       context,
                       ref,

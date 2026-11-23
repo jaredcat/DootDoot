@@ -100,6 +100,30 @@ String formatTimeHm(TimeOfDay time) {
   return '$h:$m';
 }
 
+/// Tududi-style pin: add the `today` system tag without changing due date.
+Future<void> pinTaskToToday(
+  BuildContext context,
+  WidgetRef ref,
+  TududiTask task,
+) async {
+  if (task.hasTodayTag) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Already pinned to Today')));
+    }
+    return;
+  }
+  final names = [...task.tags.map((t) => t.name), 'today'];
+  await patchTaskFields(
+    context,
+    ref,
+    task,
+    body: {'tags': names},
+    successMessage: 'Pinned to Today',
+  );
+}
+
 String formatDateYmd(DateTime date) {
   final y = date.year.toString().padLeft(4, '0');
   final m = date.month.toString().padLeft(2, '0');

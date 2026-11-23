@@ -143,6 +143,14 @@ class OfflineWriteCoordinator {
         dueTime: body.containsKey('due_time')
             ? body['due_time']?.toString()
             : fallback.dueTime,
+        deferUntil: body.containsKey('defer_until')
+            ? body['defer_until']?.toString()
+            : fallback.deferUntil,
+        parentTaskId: body.containsKey('parent_task_id')
+            ? (body['parent_task_id'] is int
+                  ? body['parent_task_id'] as int
+                  : int.tryParse(body['parent_task_id']?.toString() ?? ''))
+            : fallback.parentTaskId,
         projectId: body.containsKey('project_id')
             ? (body['project_id'] is int
                   ? body['project_id'] as int
@@ -159,7 +167,9 @@ class OfflineWriteCoordinator {
         areaId: fallback.areaId,
         areaUid: fallback.areaUid,
         goalUid: fallback.goalUid,
-        tags: fallback.tags,
+        tags: body.containsKey('tags')
+            ? _tagsFromBody(body['tags'])
+            : fallback.tags,
         subtasks: fallback.subtasks,
         completedAt: fallback.completedAt,
         recurrenceType: body.containsKey('recurrence_type')
@@ -216,13 +226,18 @@ class OfflineWriteCoordinator {
     String uid, {
     required bool done,
     TududiTask? current,
+    int? restoreStatus,
   }) async {
     final client = await _ref.read(tududiClientProvider.future);
     if (client == null) {
       throw TududiApiException(message: 'Not signed in');
     }
     try {
-      final task = await client.completeTask(uid, done: done);
+      final task = await client.completeTask(
+        uid,
+        done: done,
+        restoreStatus: restoreStatus,
+      );
       await _upsertTaskEntity(task);
       return OfflineTaskMutationResult(value: task);
     } on TududiApiException catch (e) {
@@ -237,19 +252,20 @@ class OfflineWriteCoordinator {
         'op': 'complete',
         'clientId': clientId,
         'uid': uid,
-        'body': {'done': done},
+        'body': {'done': done, 'restore_status': ?restoreStatus},
         if (current != null) 'base': _taskJson(current),
       });
+      final restored = restoreStatus ?? TaskStatus.notStarted;
       final base =
           current ??
           TududiTask(
             id: 0,
             name: '',
             uid: uid,
-            status: done ? TaskStatus.notStarted : TaskStatus.done,
+            status: done ? restored : TaskStatus.done,
           );
       final optimistic = base.copyWith(
-        status: done ? TaskStatus.done : TaskStatus.notStarted,
+        status: done ? TaskStatus.done : restored,
         completedAt: done ? DateTime.now().toIso8601String() : null,
       );
       await _patchTaskSnapshots(accountId, (tasks) {
@@ -777,7 +793,15 @@ class OfflineWriteCoordinator {
             if (uid == null || uid.startsWith('local_')) {
               throw TududiApiException(message: 'Missing uid', statusCode: 404);
             }
-            await client.completeTask(uid, done: body['done'] != false);
+            final restoreRaw = body['restore_status'];
+            final restoreStatus = restoreRaw is int
+                ? restoreRaw
+                : int.tryParse(restoreRaw?.toString() ?? '');
+            await client.completeTask(
+              uid,
+              done: body['done'] != false,
+              restoreStatus: restoreStatus,
+            );
             return null;
           case 'delete':
             if (uid == null || uid.startsWith('local_')) {
@@ -870,12 +894,29 @@ class OfflineWriteCoordinator {
     'status': t.status,
     'due_date': t.dueDate,
     if (t.dueTime != null) 'due_time': t.dueTime,
+    if (t.deferUntil != null) 'defer_until': t.deferUntil,
+    if (t.parentTaskId != null) 'parent_task_id': t.parentTaskId,
     'priority': t.priority,
+    if (t.projectId != null) 'project_id': t.projectId,
+    if (t.projectUid != null) 'project_uid': t.projectUid,
     'project_name': t.projectName,
     if (t.note != null) 'note': t.note,
     if (t.completedAt != null) 'completed_at': t.completedAt,
+    if (t.tags.isNotEmpty) 'tags': t.tags.map((tag) => tag.toJson()).toList(),
+    if (t.subtasks.isNotEmpty) 'subtasks': t.subtasks.map(_taskJson).toList(),
     ...t.recurrenceToJson(),
   };
+
+  static List<TududiTag> _tagsFromBody(Object? raw) {
+    if (raw is! List) return const [];
+    return [
+      for (var i = 0; i < raw.length; i++)
+        if (raw[i] is String && (raw[i] as String).trim().isNotEmpty)
+          TududiTag(id: i, name: (raw[i] as String).trim())
+        else if (raw[i] is Map)
+          TududiTag.fromJson(Map<String, dynamic>.from(raw[i] as Map)),
+    ];
+  }
 
   static List<int> _asIntList(Object? raw) {
     if (raw is! List) return const [];

@@ -5,10 +5,7 @@ import 'package:tududi_api/tududi_api.dart';
 ///
 /// A `null` value means the entity is deleted locally.
 class EditOverlay {
-  const EditOverlay({
-    this.tasks = const {},
-    this.notes = const {},
-  });
+  const EditOverlay({this.tasks = const {}, this.notes = const {}});
 
   final Map<String, TududiTask?> tasks;
   final Map<String, TududiNote?> notes;
@@ -16,18 +13,29 @@ class EditOverlay {
   bool get isEmpty => tasks.isEmpty && notes.isEmpty;
 }
 
-final editOverlayProvider =
-    NotifierProvider<EditOverlayNotifier, EditOverlay>(EditOverlayNotifier.new);
+final editOverlayProvider = NotifierProvider<EditOverlayNotifier, EditOverlay>(
+  EditOverlayNotifier.new,
+);
 
 class EditOverlayNotifier extends Notifier<EditOverlay> {
+  /// Status before the last complete, so uncomplete can restore Planned/etc.
+  final Map<String, int> _statusBeforeDone = {};
+
   @override
   EditOverlay build() => const EditOverlay();
 
+  void rememberOpenStatus(String uid, int status) {
+    if (status != TaskStatus.done &&
+        status != TaskStatus.archived &&
+        status != TaskStatus.cancelled) {
+      _statusBeforeDone[uid] = status;
+    }
+  }
+
+  int? consumeOpenStatus(String uid) => _statusBeforeDone.remove(uid);
+
   void setTask(String uid, TududiTask? task) {
-    state = EditOverlay(
-      tasks: {...state.tasks, uid: task},
-      notes: state.notes,
-    );
+    state = EditOverlay(tasks: {...state.tasks, uid: task}, notes: state.notes);
   }
 
   void clearTask(String uid) {
@@ -37,10 +45,7 @@ class EditOverlayNotifier extends Notifier<EditOverlay> {
   }
 
   void setNote(String uid, TududiNote? note) {
-    state = EditOverlay(
-      tasks: state.tasks,
-      notes: {...state.notes, uid: note},
-    );
+    state = EditOverlay(tasks: state.tasks, notes: {...state.notes, uid: note});
   }
 
   void clearNote(String uid) {
@@ -110,7 +115,11 @@ List<TududiNote> mergeNoteOverlay(
   return result;
 }
 
-TududiTask? overlayTaskOr(String uid, TududiTask? fallback, EditOverlay overlay) {
+TududiTask? overlayTaskOr(
+  String uid,
+  TududiTask? fallback,
+  EditOverlay overlay,
+) {
   if (overlay.tasks.containsKey(uid)) return overlay.tasks[uid];
   return fallback;
 }

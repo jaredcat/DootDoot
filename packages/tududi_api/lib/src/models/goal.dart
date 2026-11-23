@@ -31,6 +31,34 @@ class TududiGoal extends Equatable {
     );
   }
 
+  TududiGoal copyWith({
+    String? title,
+    String? why,
+    String? horizon,
+    String? targetDate,
+    String? status,
+    bool clearWhy = false,
+    bool clearTargetDate = false,
+  }) {
+    return TududiGoal(
+      id: id,
+      title: title ?? this.title,
+      uid: uid,
+      why: clearWhy ? null : (why ?? this.why),
+      horizon: horizon ?? this.horizon,
+      targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toPatchJson() => {
+    'title': title,
+    'why': why,
+    'horizon': horizon,
+    'target_date': targetDate,
+    'status': status,
+  };
+
   @override
   List<Object?> get props => [id, uid, title, horizon, status];
 }

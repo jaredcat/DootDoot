@@ -156,11 +156,22 @@ DateTime? _completedDay(TududiTask task) {
   return DateTime(local.year, local.month, local.day);
 }
 
+/// True when [defer_until] is still in the future (task should stay hidden).
+bool isDeferred(TududiTask task, {DateTime? now}) {
+  final raw = task.deferUntil;
+  if (raw == null || raw.isEmpty) return false;
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return false;
+  final when = parsed.isUtc ? parsed.toLocal() : parsed;
+  return when.isAfter(now ?? DateTime.now());
+}
+
 /// Whether [task] belongs on Today (metrics-query parity, not server `type=today`).
 ///
 /// Server `type=today` omits not-started parents that are due today/overdue;
 /// Tududi web uses separate due-today/overdue fetches instead.
 bool isTodayCandidate(TududiTask task, {DateTime? now}) {
+  if (task.isSubtask) return false;
   final today = calendarDay(now);
   if (task.isDone ||
       task.status == TaskStatus.archived ||
@@ -168,9 +179,58 @@ bool isTodayCandidate(TududiTask task, {DateTime? now}) {
     final completed = _completedDay(task);
     return completed != null && completed == today;
   }
+  if (isDeferred(task, now: now)) return false;
   if (_isPlannedStatus(task)) return true;
+  if (task.hasTodayTag) return true;
   final due = taskDueDay(task);
   return due != null && !due.isAfter(today);
+}
+
+int _suggestedRank(TududiTask task) {
+  final pri = priorityRank(task);
+  final due = taskDueDay(task);
+  // High undated first, then high with future due, then medium, …
+  final dueBucket = due == null ? 0 : 1;
+  return pri * 10 + dueBucket;
+}
+
+/// Ranked Suggested pool (Tududi-style) from open non-Today-core tasks.
+List<TududiTask> rankSuggestedCandidates(
+  Iterable<TududiTask> tasks, {
+  DateTime? now,
+  int limit = 10,
+}) {
+  final today = calendarDay(now);
+  final pool = <TududiTask>[];
+  for (final task in tasks) {
+    if (task.isSubtask || !task.isOpen) continue;
+    if (isDeferred(task, now: now)) continue;
+    if (_isPlannedStatus(task)) continue;
+    if (task.hasTodayTag) continue;
+    final due = taskDueDay(task);
+    if (due != null && !due.isAfter(today)) continue;
+    if (task.hasSomedayTag) continue; // fill later only if needed
+    pool.add(task);
+  }
+  pool.sort((a, b) {
+    final byRank = _suggestedRank(a).compareTo(_suggestedRank(b));
+    if (byRank != 0) return byRank;
+    return compareTasksTududi(a, b);
+  });
+
+  if (pool.length >= limit) return pool.take(limit).toList();
+
+  final someday = <TududiTask>[];
+  for (final task in tasks) {
+    if (task.isSubtask || !task.isOpen) continue;
+    if (isDeferred(task, now: now)) continue;
+    if (!task.hasSomedayTag) continue;
+    if (_isPlannedStatus(task)) continue;
+    someday.add(task);
+  }
+  someday.sort(compareTasksTududi);
+  final combined = [...pool, ...someday];
+  return combined.take(limit).toList();
 }
 
 /// Filters and dedupes tasks for the Today screen.
@@ -184,6 +244,14 @@ List<TududiTask> filterTodayCandidates(
     deduped[task.uid ?? '${task.id}'] = task;
   }
   return deduped.values.toList();
+}
+
+/// Parents only — subtasks belong under their parent detail.
+List<TududiTask> excludeSubtasks(Iterable<TududiTask> tasks) {
+  return [
+    for (final t in tasks)
+      if (!t.isSubtask) t,
+  ];
 }
 
 /// Partition Today candidates into Tududi-like sections (no duplication).
@@ -203,12 +271,14 @@ List<TaskSection> organizeTodaySections(
   final completed = <TududiTask>[];
 
   for (final task in tasks) {
+    if (task.isSubtask) continue;
     if (task.isDone ||
         task.status == TaskStatus.archived ||
         task.status == TaskStatus.cancelled) {
       completed.add(task);
       continue;
     }
+    if (isDeferred(task, now: now)) continue;
     if (_isPlannedStatus(task)) {
       planned.add(task);
       continue;
@@ -219,6 +289,11 @@ List<TaskSection> organizeTodaySections(
       continue;
     }
     if (due != null && due == today) {
+      dueToday.add(task);
+      continue;
+    }
+    // Tagged today (no due) lands with due-today work.
+    if (task.hasTodayTag) {
       dueToday.add(task);
       continue;
     }

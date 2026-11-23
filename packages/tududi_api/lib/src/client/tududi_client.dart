@@ -137,9 +137,15 @@ class TududiClient {
     await _delete('/api/task/$uid');
   }
 
-  Future<TududiTask> completeTask(String uid, {bool done = true}) {
+  Future<TududiTask> completeTask(
+    String uid, {
+    bool done = true,
+    int? restoreStatus,
+  }) {
     return updateTask(uid, {
-      'status': done ? TaskStatus.done : TaskStatus.notStarted,
+      'status': done
+          ? TaskStatus.done
+          : (restoreStatus ?? TaskStatus.notStarted),
     });
   }
 
@@ -219,6 +225,16 @@ class TududiClient {
     return _parseList(data, TududiGoal.fromJson);
   }
 
+  Future<TududiGoal> getGoal(String uid) async {
+    final data = await _get('/api/goal/$uid');
+    return TududiGoal.fromJson(_unwrapEntity(_asMap(data), 'goal'));
+  }
+
+  Future<TududiGoal> updateGoal(String uid, Map<String, dynamic> body) async {
+    final data = await _patch('/api/goal/$uid', body);
+    return TududiGoal.fromJson(_unwrapEntity(_asMap(data), 'goal'));
+  }
+
   Future<List<TududiHabit>> listHabits() async {
     final data = await _get('/api/habits');
     return _parseList(data, TududiHabit.fromJson);
@@ -226,6 +242,61 @@ class TududiClient {
 
   Future<void> completeHabit(String uid) async {
     await _post('/api/habit/$uid/complete', const {});
+  }
+
+  /// Completions for a habit. Items include at least `id` and `completed_at`.
+  Future<List<Map<String, dynamic>>> listHabitCompletions(String uid) async {
+    final data = await _get('/api/habit/$uid/completions');
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+    if (data is Map) {
+      final list = data['completions'] ?? data['data'];
+      if (list is List) {
+        return list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+    return const [];
+  }
+
+  Future<void> deleteHabitCompletion(String uid, int completionId) async {
+    await _delete('/api/habit/$uid/completions/$completionId');
+  }
+
+  /// Undo today's completion when possible (deletes the latest completion).
+  Future<bool> uncompleteHabitToday(String uid) async {
+    final completions = await listHabitCompletions(uid);
+    if (completions.isEmpty) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    Map<String, dynamic>? todayCompletion;
+    for (final row in completions) {
+      final raw = row['completed_at']?.toString();
+      if (raw == null || raw.isEmpty) continue;
+      final parsed = DateTime.tryParse(raw)?.toLocal();
+      if (parsed == null) continue;
+      final day = DateTime(parsed.year, parsed.month, parsed.day);
+      if (day == today) {
+        todayCompletion = row;
+        break;
+      }
+    }
+    todayCompletion ??= completions.first;
+    final id = todayCompletion['id'];
+    final completionId = id is int
+        ? id
+        : id is num
+        ? id.toInt()
+        : int.tryParse(id?.toString() ?? '');
+    if (completionId == null) return false;
+    await deleteHabitCompletion(uid, completionId);
+    return true;
   }
 
   // --- Inbox ---
