@@ -14,6 +14,8 @@ import '../../features/onboarding/onboarding_page.dart';
 import '../../features/projects/project_detail_page.dart';
 import '../../features/projects/projects_page.dart';
 import '../../features/search/search_page.dart';
+import '../../features/search/view_detail_page.dart';
+import '../../features/search/views_page.dart';
 import '../../features/settings/notifications_settings_page.dart';
 import '../../features/settings/today_settings_page.dart';
 import '../../features/settings/settings_page.dart';
@@ -36,60 +38,50 @@ List<NavPin> _livePins(BuildContext context) {
 }
 
 List<RouteBase> _moreChildRoutes(List<ProMoreRoute> proRoutes) => [
+  GoRoute(path: 'projects', builder: (context, state) => const ProjectsPage()),
+  GoRoute(
+    path: 'projects/:uid',
+    builder: (context, state) =>
+        ProjectDetailPage(uid: state.pathParameters['uid']!),
+  ),
+  GoRoute(path: 'areas', builder: (context, state) => const AreasPage()),
+  GoRoute(
+    path: 'areas/:uid',
+    builder: (context, state) =>
+        AreaDetailPage(uid: state.pathParameters['uid']!),
+  ),
+  GoRoute(path: 'notes', builder: (context, state) => const NotesPage()),
+  GoRoute(
+    path: 'notes/:uid',
+    builder: (context, state) =>
+        NoteEditorPage(uid: state.pathParameters['uid']),
+  ),
+  GoRoute(path: 'search', builder: (context, state) => const SearchPage()),
+  GoRoute(path: 'views', builder: (context, state) => const ViewsPage()),
+  GoRoute(
+    path: 'views/:uid',
+    builder: (context, state) =>
+        ViewDetailPage(uid: state.pathParameters['uid']!),
+  ),
+  GoRoute(
+    path: 'settings',
+    builder: (context, state) => const SettingsPage(),
+    routes: [
       GoRoute(
-        path: 'projects',
-        builder: (context, state) => const ProjectsPage(),
-      ),
-      GoRoute(
-        path: 'projects/:uid',
-        builder: (context, state) =>
-            ProjectDetailPage(uid: state.pathParameters['uid']!),
-      ),
-      GoRoute(
-        path: 'areas',
-        builder: (context, state) => const AreasPage(),
-      ),
-      GoRoute(
-        path: 'areas/:uid',
-        builder: (context, state) =>
-            AreaDetailPage(uid: state.pathParameters['uid']!),
-      ),
-      GoRoute(
-        path: 'notes',
-        builder: (context, state) => const NotesPage(),
-      ),
-      GoRoute(
-        path: 'notes/:uid',
-        builder: (context, state) =>
-            NoteEditorPage(uid: state.pathParameters['uid']),
-      ),
-      GoRoute(
-        path: 'search',
-        builder: (context, state) => const SearchPage(),
-      ),
-      GoRoute(
-        path: 'settings',
-        builder: (context, state) => const SettingsPage(),
-        routes: [
-          GoRoute(
-            path: 'notifications',
-            builder: (context, state) =>
-                const NotificationsSettingsPage(),
-          ),
-          GoRoute(
-            path: 'today',
-            builder: (context, state) => const TodaySettingsPage(),
-          ),
-        ],
+        path: 'notifications',
+        builder: (context, state) => const NotificationsSettingsPage(),
       ),
       GoRoute(
-        path: 'accounts',
-        builder: (context, state) => const AccountsPage(),
+        path: 'today',
+        builder: (context, state) => const TodaySettingsPage(),
       ),
-      ...proRoutes.map(
-        (route) => GoRoute(path: route.path, builder: route.builder),
-      ),
-    ];
+    ],
+  ),
+  GoRoute(path: 'accounts', builder: (context, state) => const AccountsPage()),
+  ...proRoutes.map(
+    (route) => GoRoute(path: route.path, builder: route.builder),
+  ),
+];
 
 StatefulShellBranch _moreBranch(List<ProMoreRoute> proRoutes) {
   return StatefulShellBranch(
@@ -117,8 +109,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final initialLocation = accounts.isEmpty
       ? '/onboarding'
       : useCustom
-          ? '/nav/0'
-          : '/today';
+      ? '/nav/0'
+      : '/today';
 
   final List<StatefulShellBranch> branches;
   if (useCustom) {

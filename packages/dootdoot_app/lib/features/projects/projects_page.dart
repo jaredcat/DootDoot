@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/providers.dart';
 import '../../core/widgets/shell_app_bar_actions.dart';
 import '../tasks/task_providers.dart';
+import 'project_edit_sheet.dart';
 
 class ProjectsPage extends ConsumerWidget {
   const ProjectsPage({super.key});
@@ -18,6 +20,10 @@ class ProjectsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Projects'),
         actions: const [ShellAppBarActions()],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _createProject(context, ref),
+        child: const Icon(Symbols.add),
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -51,5 +57,29 @@ class ProjectsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _createProject(BuildContext context, WidgetRef ref) async {
+    final result = await showProjectEditSheet(context, ref);
+    if (result == null || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      final created = await client.createProject(result);
+      ref.invalidate(projectsProvider);
+      if (!context.mounted) return;
+      final uid = created.uid;
+      if (uid != null) {
+        context.push('/more/projects/$uid');
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Project created')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }

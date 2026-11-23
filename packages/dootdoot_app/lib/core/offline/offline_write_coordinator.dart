@@ -352,6 +352,12 @@ class OfflineWriteCoordinator {
         title: (body['title'] ?? '').toString(),
         uid: localUid,
         content: body['content']?.toString(),
+        projectId: body['project_id'] is int
+            ? body['project_id'] as int
+            : int.tryParse(body['project_id']?.toString() ?? ''),
+        projectUid: body['project_uid']?.toString(),
+        tags: _tagsFromBody(body['tags']),
+        color: body['color']?.toString(),
       );
       await _cache.enqueueWrite(accountId, {
         'entity': 'note',
@@ -400,6 +406,20 @@ class OfflineWriteCoordinator {
         title: body['title']?.toString() ?? current?.title ?? '',
         uid: uid,
         content: body['content']?.toString() ?? current?.content,
+        projectId: body.containsKey('project_id')
+            ? (body['project_id'] is int
+                  ? body['project_id'] as int
+                  : int.tryParse(body['project_id']?.toString() ?? ''))
+            : current?.projectId,
+        projectUid: body.containsKey('project_uid')
+            ? body['project_uid']?.toString()
+            : current?.projectUid,
+        tags: body.containsKey('tags')
+            ? _tagsFromBody(body['tags'])
+            : (current?.tags ?? const []),
+        color: body.containsKey('color')
+            ? body['color']?.toString()
+            : current?.color,
         updatedAt: DateTime.now().toIso8601String(),
       );
       await _patchNotes(accountId, (notes) {
@@ -938,6 +958,10 @@ class OfflineWriteCoordinator {
     'title': n.title,
     if (n.content != null) 'content': n.content,
     if (n.updatedAt != null) 'updated_at': n.updatedAt,
+    if (n.projectId != null) 'project_id': n.projectId,
+    if (n.projectUid != null) 'project_uid': n.projectUid,
+    if (n.color != null && n.color!.isNotEmpty) 'color': n.color,
+    if (n.tags.isNotEmpty) 'tags': n.tags.map((tag) => tag.toJson()).toList(),
   };
 
   static bool _taskEquals(TududiTask a, TududiTask b) {

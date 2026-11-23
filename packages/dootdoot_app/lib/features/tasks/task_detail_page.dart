@@ -427,6 +427,120 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
     }
   }
 
+  Future<void> _pickArea(TududiTask task) async {
+    final areas = await ref.read(areasProvider.future);
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<Object>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Area',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                title: const Text('None'),
+                trailing: task.areaId == null && task.areaUid == null
+                    ? const Icon(Symbols.check)
+                    : null,
+                onTap: () => Navigator.of(context).pop('none'),
+              ),
+              for (final area in areas)
+                ListTile(
+                  title: Text(area.name),
+                  trailing:
+                      (area.uid != null && area.uid == task.areaUid) ||
+                          area.id == task.areaId
+                      ? const Icon(Symbols.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(area),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    if (selected == 'none') {
+      await _patch(task, {
+        'area_id': null,
+        'area_uid': null,
+      }, successMessage: 'Area cleared');
+      return;
+    }
+    if (selected is TududiArea) {
+      await _patch(task, {
+        'area_id': selected.id,
+        if (selected.uid != null) 'area_uid': selected.uid,
+      }, successMessage: 'Area set');
+    }
+  }
+
+  Future<void> _pickGoal(TududiTask task) async {
+    List<TududiGoal> goals;
+    try {
+      goals = await ref.read(goalsProvider.future);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Could not load goals')));
+      return;
+    }
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<Object>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Text(
+                  'Goal',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                title: const Text('None'),
+                trailing: task.goalUid == null
+                    ? const Icon(Symbols.check)
+                    : null,
+                onTap: () => Navigator.of(context).pop('none'),
+              ),
+              for (final goal in goals)
+                ListTile(
+                  title: Text(goal.title),
+                  trailing: goal.uid != null && goal.uid == task.goalUid
+                      ? const Icon(Symbols.check)
+                      : null,
+                  onTap: () => Navigator.of(context).pop(goal),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null || !mounted) return;
+    if (selected == 'none') {
+      await _patch(task, {'goal_uid': null}, successMessage: 'Goal cleared');
+      return;
+    }
+    if (selected is TududiGoal && selected.uid != null) {
+      await _patch(task, {
+        'goal_uid': selected.uid,
+      }, successMessage: 'Goal linked');
+    }
+  }
+
   Future<void> _delete(TududiTask task) async {
     await deleteTaskWithConfirm(
       context,
@@ -436,6 +550,31 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
         if (mounted) context.pop();
       },
     );
+  }
+
+  String _areaLabel(TududiTask task) {
+    if (task.areaId == null && task.areaUid == null) return 'None';
+    final areas = ref.read(areasProvider).asData?.value;
+    if (areas != null) {
+      for (final a in areas) {
+        if ((task.areaUid != null && a.uid == task.areaUid) ||
+            a.id == task.areaId) {
+          return a.name;
+        }
+      }
+    }
+    return task.areaUid ?? 'Area';
+  }
+
+  String _goalLabel(TududiTask task) {
+    if (task.goalUid == null || task.goalUid!.isEmpty) return 'None';
+    final goals = ref.read(goalsProvider).asData?.value;
+    if (goals != null) {
+      for (final g in goals) {
+        if (g.uid == task.goalUid) return g.title;
+      }
+    }
+    return 'Linked';
   }
 
   String _dueSubtitle(TududiTask task) {
@@ -562,6 +701,20 @@ class _TaskDetailPageState extends ConsumerState<TaskDetailPage> {
                 ),
                 trailing: const Icon(Symbols.chevron_right),
                 onTap: _saving ? null : () => _pickProject(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Area'),
+                subtitle: Text(_areaLabel(task)),
+                trailing: const Icon(Symbols.chevron_right),
+                onTap: _saving ? null : () => _pickArea(task),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Goal'),
+                subtitle: Text(_goalLabel(task)),
+                trailing: const Icon(Symbols.chevron_right),
+                onTap: _saving ? null : () => _pickGoal(task),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,

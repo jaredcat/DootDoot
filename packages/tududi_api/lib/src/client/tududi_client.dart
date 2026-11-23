@@ -166,6 +166,18 @@ class TududiClient {
     return TududiProject.fromJson(_unwrapEntity(_asMap(data), 'project'));
   }
 
+  Future<TududiProject> updateProject(
+    String uid,
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _patch('/api/project/$uid', body);
+    return TududiProject.fromJson(_unwrapEntity(_asMap(data), 'project'));
+  }
+
+  Future<void> deleteProject(String uid) async {
+    await _delete('/api/project/$uid');
+  }
+
   // --- Areas ---
 
   Future<List<TududiArea>> listAreas() async {
@@ -176,6 +188,15 @@ class TududiClient {
   Future<TududiArea> createArea(Map<String, dynamic> body) async {
     final data = await _post('/api/area', body);
     return TududiArea.fromJson(_unwrapEntity(_asMap(data), 'area'));
+  }
+
+  Future<TududiArea> updateArea(String uid, Map<String, dynamic> body) async {
+    final data = await _patch('/api/area/$uid', body);
+    return TududiArea.fromJson(_unwrapEntity(_asMap(data), 'area'));
+  }
+
+  Future<void> deleteArea(String uid) async {
+    await _delete('/api/area/$uid');
   }
 
   // --- Notes ---
@@ -213,9 +234,46 @@ class TududiClient {
 
   // --- Search ---
 
-  Future<Map<String, dynamic>> search(String query) async {
-    final data = await _get('/api/search', query: {'q': query});
+  Future<Map<String, dynamic>> search(
+    String query, {
+    String? priority,
+    String? due,
+    String? defer,
+    List<String>? tags,
+  }) async {
+    final params = <String, dynamic>{'q': query};
+    if (priority != null && priority.isNotEmpty) params['priority'] = priority;
+    if (due != null && due.isNotEmpty) params['due'] = due;
+    if (defer != null && defer.isNotEmpty) params['defer'] = defer;
+    if (tags != null && tags.isNotEmpty) params['tags'] = tags.join(',');
+    final data = await _get('/api/search', query: params);
     return _asMap(data);
+  }
+
+  // --- Views ---
+
+  Future<List<TududiView>> listViews() async {
+    final data = await _get('/api/views');
+    return _parseList(data, TududiView.fromJson);
+  }
+
+  Future<TududiView> getView(String uid) async {
+    final data = await _get('/api/views/$uid');
+    return TududiView.fromJson(_unwrapEntity(_asMap(data), 'view'));
+  }
+
+  Future<TududiView> createView(Map<String, dynamic> body) async {
+    final data = await _post('/api/views', body);
+    return TududiView.fromJson(_unwrapEntity(_asMap(data), 'view'));
+  }
+
+  Future<TududiView> updateView(String uid, Map<String, dynamic> body) async {
+    final data = await _patch('/api/views/$uid', body);
+    return TududiView.fromJson(_unwrapEntity(_asMap(data), 'view'));
+  }
+
+  Future<void> deleteView(String uid) async {
+    await _delete('/api/views/$uid');
   }
 
   // --- Goals / Habits (parity) ---

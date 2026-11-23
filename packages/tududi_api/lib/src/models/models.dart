@@ -7,3 +7,4 @@ export 'project.dart';
 export 'tag.dart';
 export 'task.dart';
 export 'user.dart';
+export 'view.dart';

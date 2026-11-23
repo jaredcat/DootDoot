@@ -45,6 +45,9 @@ dependencies:
   material_ui: ^1.11.0
   audioplayers: ^6.8.1
   device_info_plus: ^13.3.0
+  flutter_markdown_plus: ^1.0.12
+  flutter_highlight: ^0.7.0
+  markdown: ^7.3.1
 
 dev_dependencies:
   flutter_test:

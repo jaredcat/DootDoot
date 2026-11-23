@@ -259,6 +259,7 @@ class TududiTask extends Equatable {
     if (projectUid != null) 'project_uid': projectUid,
     if (areaId != null) 'area_id': areaId,
     if (areaUid != null) 'area_uid': areaUid,
+    if (goalUid != null) 'goal_uid': goalUid,
     if (parentTaskId != null) 'parent_task_id': parentTaskId,
     if (deferUntil != null) 'defer_until': deferUntil,
     'tags': tags.map((t) => t.name).toList(),
@@ -278,6 +279,7 @@ class TududiTask extends Equatable {
     if (projectUid != null) 'project_uid': projectUid,
     if (areaId != null) 'area_id': areaId,
     if (areaUid != null) 'area_uid': areaUid,
+    if (goalUid != null) 'goal_uid': goalUid,
     if (parentTaskId != null) 'parent_task_id': parentTaskId,
     // Always send tags so clearing is possible.
     'tags': tags.map((t) => t.name).toList(),

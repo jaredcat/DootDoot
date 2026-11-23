@@ -46,12 +46,19 @@ class NotesPage extends ConsumerWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final note = notes[index];
+                final preview = note.content == null || note.content!.isEmpty
+                    ? null
+                    : note.content!;
+                final tagLine = note.tags.isEmpty
+                    ? null
+                    : note.tags.map((t) => t.name).join(' · ');
+                final subtitle = [?tagLine, ?preview].join('\n');
                 final tile = ListTile(
                   title: Text(note.title.isEmpty ? 'Untitled' : note.title),
-                  subtitle: note.content == null || note.content!.isEmpty
+                  subtitle: subtitle.isEmpty
                       ? null
                       : Text(
-                          note.content!,
+                          subtitle,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -94,17 +101,15 @@ class NotesPage extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
     try {
-      final result = await ref.read(offlineWriteCoordinatorProvider).deleteNote(
-            uid,
-            current: note,
-          );
+      final result = await ref
+          .read(offlineWriteCoordinatorProvider)
+          .deleteNote(uid, current: note);
       ref.read(editHistoryProvider.notifier).push(NoteDeleteCommand(note));
       ref.invalidate(notesProvider);
       if (!context.mounted) return;
       final msg = offlineQueuedMessage(result);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg ?? 'Deleted')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg ?? 'Deleted')));
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)

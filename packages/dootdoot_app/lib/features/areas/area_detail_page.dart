@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/edit_history/edit_commands.dart';
 import '../../core/edit_history/edit_history.dart';
@@ -9,7 +10,9 @@ import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_actions.dart';
+import '../tasks/task_providers.dart';
 import '../tasks/task_tile.dart';
+import 'area_edit_sheet.dart';
 
 final areaDetailProvider =
     FutureProvider.family<(TududiArea, List<TududiTask>), String>((
@@ -62,7 +65,19 @@ class AreaDetailPage extends ConsumerWidget {
         final area = data.$1;
         final tasks = mergeTaskOverlay(data.$2, overlay.tasks);
         return Scaffold(
-          appBar: AppBar(title: Text(area.name)),
+          appBar: AppBar(
+            title: Text(area.name),
+            actions: [
+              IconButton(
+                icon: const Icon(Symbols.edit),
+                onPressed: () => _edit(context, ref, area),
+              ),
+              IconButton(
+                icon: const Icon(Symbols.delete),
+                onPressed: () => _delete(context, ref, area),
+              ),
+            ],
+          ),
           body: RefreshIndicator(
             onRefresh: () async => ref.invalidate(areaDetailProvider(uid)),
             child: ListView(
@@ -143,5 +158,59 @@ class AreaDetailPage extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    TududiArea area,
+  ) async {
+    final body = await showAreaEditSheet(context, existing: area);
+    if (body == null || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      await client.updateArea(uid, body);
+      ref.invalidate(areaDetailProvider(uid));
+      ref.invalidate(areasProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Area saved')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    TududiArea area,
+  ) async {
+    final ok = await confirmDelete(
+      context,
+      title: 'Delete area?',
+      body: area.name,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      await client.deleteArea(uid);
+      ref.invalidate(areasProvider);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Area deleted')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }

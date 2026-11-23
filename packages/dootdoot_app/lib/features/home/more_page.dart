@@ -17,12 +17,11 @@ class MorePage extends ConsumerWidget {
     final useCustom = ref.watch(useCustomBottomNavProvider);
     final pins = ref.watch(bottomNavPinsProvider);
     final hiddenRoutes = useCustom
-        ? pins
-            .map((p) => p.moreRouteToHide)
-            .whereType<String>()
-            .toSet()
+        ? pins.map((p) => p.moreRouteToHide).whereType<String>().toSet()
         : <String>{};
-    final hiddenKinds = useCustom ? pins.map((p) => p.kind).toSet() : <NavPinKind>{};
+    final hiddenKinds = useCustom
+        ? pins.map((p) => p.kind).toSet()
+        : <NavPinKind>{};
 
     bool hideRoute(String route) => hiddenRoutes.contains(route);
     bool hideKind(NavPinKind kind) => hiddenKinds.contains(kind);
@@ -74,6 +73,12 @@ class MorePage extends ConsumerWidget {
             title: 'Search',
             onTap: () => context.push('/more/search'),
           ),
+        _tile(
+          context,
+          icon: Symbols.bookmark,
+          title: 'Views',
+          onTap: () => context.push('/more/views'),
+        ),
         if (!hideKind(NavPinKind.accounts) && !hideRoute('/more/accounts'))
           _tile(
             context,

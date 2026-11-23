@@ -1,10 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:tududi_api/tududi_api.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/providers.dart';
 import '../../core/widgets/shell_app_bar_actions.dart';
 import '../tasks/task_providers.dart';
+import 'area_edit_sheet.dart';
 
 class AreasPage extends ConsumerWidget {
   const AreasPage({super.key});
@@ -17,6 +20,10 @@ class AreasPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Areas'),
         actions: const [ShellAppBarActions()],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _createArea(context, ref),
+        child: const Icon(Symbols.add),
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -53,5 +60,29 @@ class AreasPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _createArea(BuildContext context, WidgetRef ref) async {
+    final body = await showAreaEditSheet(context);
+    if (body == null || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      final created = await client.createArea(body);
+      ref.invalidate(areasProvider);
+      if (!context.mounted) return;
+      final uid = created.uid;
+      if (uid != null) {
+        context.push('/more/areas/$uid');
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Area created')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }

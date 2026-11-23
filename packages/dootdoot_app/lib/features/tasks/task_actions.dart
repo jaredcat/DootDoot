@@ -194,6 +194,9 @@ Future<void> patchTaskFields(
       'due_date': task.dueDate,
       if (task.projectId != null) 'project_id': task.projectId,
       if (task.projectUid != null) 'project_uid': task.projectUid,
+      if (task.areaId != null) 'area_id': task.areaId,
+      if (task.areaUid != null) 'area_uid': task.areaUid,
+      if (task.goalUid != null) 'goal_uid': task.goalUid,
       ...body,
     };
     final result = await ref

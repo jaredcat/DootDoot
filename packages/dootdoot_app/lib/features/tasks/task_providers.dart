@@ -8,6 +8,18 @@ import 'task_list_organize.dart';
 
 enum TaskListFilter { today, upcoming, inbox, someday, all }
 
+Map<String, dynamic> _noteListCacheJson(TududiNote n) => {
+  'id': n.id,
+  'uid': n.uid,
+  'title': n.title,
+  if (n.content != null) 'content': n.content,
+  if (n.updatedAt != null) 'updated_at': n.updatedAt,
+  if (n.projectId != null) 'project_id': n.projectId,
+  if (n.projectUid != null) 'project_uid': n.projectUid,
+  if (n.color != null && n.color!.isNotEmpty) 'color': n.color,
+  if (n.tags.isNotEmpty) 'tags': n.tags.map((tag) => tag.toJson()).toList(),
+};
+
 Map<String, dynamic> _taskListCacheJson(TududiTask t) => {
   'id': t.id,
   'uid': t.uid,
@@ -188,23 +200,7 @@ final notesProvider = FutureProvider<List<TududiNote>>((ref) async {
   if (client == null) return const [];
   try {
     final notes = await client.listNotes();
-    await _putList(
-      ref,
-      'notes',
-      notes
-          .map(
-            (n) => {
-              'id': n.id,
-              'uid': n.uid,
-              'title': n.title,
-              if (n.content != null) 'content': n.content,
-              if (n.updatedAt != null) 'updated_at': n.updatedAt,
-              if (n.projectId != null) 'project_id': n.projectId,
-              if (n.projectUid != null) 'project_uid': n.projectUid,
-            },
-          )
-          .toList(),
-    );
+    await _putList(ref, 'notes', notes.map(_noteListCacheJson).toList());
     return notes;
   } catch (e) {
     final cached = await _cachedList(ref, 'notes', TududiNote.fromJson);

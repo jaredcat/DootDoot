@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tududi_api/tududi_api.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 import '../../core/edit_history/edit_commands.dart';
 import '../../core/edit_history/edit_history.dart';
@@ -9,7 +10,9 @@ import '../../core/edit_history/edit_overlay.dart';
 import '../../core/offline/offline_write_coordinator.dart';
 import '../../core/providers.dart';
 import '../tasks/task_actions.dart';
+import '../tasks/task_providers.dart';
 import '../tasks/task_tile.dart';
+import 'project_edit_sheet.dart';
 
 final projectDetailProvider =
     FutureProvider.family<(TududiProject, List<TududiTask>), String>((
@@ -46,12 +49,30 @@ class ProjectDetailPage extends ConsumerWidget {
       data: (data) {
         final project = data.$1;
         final tasks = mergeTaskOverlay(data.$2, overlay.tasks);
+        final stateLabel = ProjectState.label(project.state);
         return Scaffold(
-          appBar: AppBar(title: Text(project.name)),
+          appBar: AppBar(
+            title: Text(project.name),
+            actions: [
+              IconButton(
+                icon: const Icon(Symbols.edit),
+                onPressed: () => _edit(context, ref, project),
+              ),
+              IconButton(
+                icon: const Icon(Symbols.delete),
+                onPressed: () => _delete(context, ref, project),
+              ),
+            ],
+          ),
           body: RefreshIndicator(
             onRefresh: () async => ref.invalidate(projectDetailProvider(uid)),
             child: ListView(
               children: [
+                if (stateLabel.isNotEmpty)
+                  ListTile(
+                    leading: const Icon(Symbols.flag),
+                    title: Text(stateLabel),
+                  ),
                 if (project.description != null &&
                     project.description!.isNotEmpty)
                   Padding(
@@ -130,5 +151,59 @@ class ProjectDetailPage extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    TududiProject project,
+  ) async {
+    final body = await showProjectEditSheet(context, ref, existing: project);
+    if (body == null || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      await client.updateProject(uid, body);
+      ref.invalidate(projectDetailProvider(uid));
+      ref.invalidate(projectsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Project saved')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    TududiProject project,
+  ) async {
+    final ok = await confirmDelete(
+      context,
+      title: 'Delete project?',
+      body: project.name,
+    );
+    if (!ok || !context.mounted) return;
+    try {
+      final client = await ref.read(tududiClientProvider.future);
+      if (client == null) throw TududiApiException(message: 'Not signed in');
+      await client.deleteProject(uid);
+      ref.invalidate(projectsProvider);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Project deleted')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 }

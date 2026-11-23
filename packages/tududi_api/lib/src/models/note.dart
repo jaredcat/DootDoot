@@ -11,6 +11,7 @@ class TududiNote extends Equatable {
     this.projectId,
     this.projectUid,
     this.tags = const [],
+    this.color,
     this.updatedAt,
   });
 
@@ -21,6 +22,7 @@ class TududiNote extends Equatable {
   final int? projectId;
   final String? projectUid;
   final List<TududiTag> tags;
+  final String? color;
   final String? updatedAt;
 
   factory TududiNote.fromJson(Map<String, dynamic> json) {
@@ -33,37 +35,54 @@ class TududiNote extends Equatable {
       projectId: _asIntOrNull(json['project_id']),
       projectUid: json['project_uid']?.toString(),
       tags: _parseTags(tagsJson),
+      color: json['color']?.toString(),
       updatedAt: json['updated_at']?.toString(),
     );
   }
 
   Map<String, dynamic> toCreateJson() => {
-        'title': title,
-        if (content != null) 'content': content,
-        if (projectId != null) 'project_id': projectId,
-        if (projectUid != null) 'project_uid': projectUid,
-      };
+    'title': title,
+    if (content != null) 'content': content,
+    if (projectId != null) 'project_id': projectId,
+    if (projectUid != null) 'project_uid': projectUid,
+    if (color != null && color!.isNotEmpty) 'color': color,
+    'tags': tags.map((t) => t.name).toList(),
+  };
 
   TududiNote copyWith({
     String? title,
     String? content,
     int? projectId,
     String? projectUid,
+    List<TududiTag>? tags,
+    String? color,
+    bool clearProject = false,
+    bool clearColor = false,
   }) {
     return TududiNote(
       id: id,
       title: title ?? this.title,
       uid: uid,
       content: content ?? this.content,
-      projectId: projectId ?? this.projectId,
-      projectUid: projectUid ?? this.projectUid,
-      tags: tags,
+      projectId: clearProject ? null : (projectId ?? this.projectId),
+      projectUid: clearProject ? null : (projectUid ?? this.projectUid),
+      tags: tags ?? this.tags,
+      color: clearColor ? null : (color ?? this.color),
       updatedAt: updatedAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, uid, title, content, projectId];
+  List<Object?> get props => [
+    id,
+    uid,
+    title,
+    content,
+    projectId,
+    projectUid,
+    tags,
+    color,
+  ];
 }
 
 List<TududiTag> _parseTags(Object? raw) {
